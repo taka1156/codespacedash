@@ -1,4 +1,4 @@
-<img src="src/assets/logo.svg" alt="codespacedash">
+<img src="src/assets/logo.svg" alt="codespacedash" width="100%" height="100%">
 
 GitHub Codespaces・Actions・Copilot の利用状況を可視化するダッシュボード。
 
