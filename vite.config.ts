@@ -22,27 +22,26 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       emptyOutDir: true,
-      rollupOptions: {
+      rolldownOptions: {
         output: {
-          manualChunks(id) {
-            if (!id.includes('node_modules')) {
-              return;
-            }
-
-            if (id.includes('/recharts/')) {
-              return 'recharts-vendor';
-            }
-            if (id.includes('/d3-') || id.includes('/d3/')) {
-              return 'd3-vendor';
-            }
-            if (
-              id.includes('/react-dom/') ||
-              id.includes('/react/') ||
-              id.includes('/scheduler/')
-            ) {
-              return 'react-vendor';
-            }
-            return 'other-vendor';
+          codeSplitting: {
+            groups: [
+              {
+                name: 'react-vendor',
+                test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+                priority: 30,
+              },
+              {
+                name: 'charts-vendor',
+                test: /node_modules[\\/](recharts|d3|d3-[^\\/]+)[\\/]/,
+                priority: 20,
+              },
+              {
+                name: 'other-vendor',
+                test: /node_modules/,
+                priority: 10,
+              },
+            ],
           },
         },
       },
