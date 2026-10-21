@@ -7,6 +7,7 @@
     "lint": "biome check .",
     "lint:fix": "biome check . --write",
     "dev": "vite --port 5173",
+    "analyze": "vite build --mode analyze",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -23,8 +24,9 @@
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vanilla-extract/vite-plugin": "^5.2.2",
-    "@vitejs/plugin-react": "^4.4.1",
-    "typescript": "^5.8.3",
-    "vite": "^6.3.3"
+    "@vitejs/plugin-react-swc": "^4.3.3",
+    "rollup-plugin-visualizer": "^7.1.1",
+    "typescript": "^7.0.2",
+    "vite": "8"
   }
 }
