@@ -4,6 +4,7 @@
   "service": "app",
   "workspaceFolder": "/workspace",
   "dockerComposeFile": "docker-compose.yaml",
+  "postCreateCommand": "yarn install",
   "customizations": {
     "vscode": {
       "settings": {
