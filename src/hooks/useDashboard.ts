@@ -49,7 +49,7 @@ export const useDashboard = (token: string) => {
 
       // Premium Request Usage
       const premiumRequests = await apiFetch<PremiumRequestUsage>(
-        `/users/${login}/settings/billing/premium_request/usage?${params}`,
+        `/users/${login}/settings/billing/ai_credit/usage?${params}`,
         token,
       );
 
