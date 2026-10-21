@@ -63,11 +63,7 @@ export const LoginPage = ({ onLogin, loading, errorMsg }: Props) => {
     <div className={loginRoot}>
       <div className={clsx(loginCard, mounted && loginCardMounted)}>
         <div className={loginLogo}>
-          <img
-            className={loginLogoImg}
-            src="./src/assets/logo.svg"
-            alt="CodespaceDash"
-          />
+          <img className={loginLogoImg} src="./logo.svg" alt="CodespaceDash" />
         </div>
 
         <h1 className={loginTitle}>GitHub Dashboard</h1>

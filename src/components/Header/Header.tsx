@@ -32,7 +32,7 @@ export const Header = ({
   <header className={header}>
     <div className={headerLeft}>
       <div className={headerLogo}>
-        <img src="src/assets/logo.svg" alt="CodespaceDash" />
+        <img src="./logo.svg" alt="CodespaceDash" />
       </div>
     </div>
     <div className={headerRight}>
