@@ -10,8 +10,8 @@ GitHub Codespaces・Actions・Copilot の利用状況を可視化するダッシ
 ### 1. インストール & 起動
 
 ```bash
-npm install
-npm run dev
+yarn install
+yarn dev
 ```
 
 ブラウザで http://localhost:5173 を開き、PATを入力するだけです。
