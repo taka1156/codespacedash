@@ -22,7 +22,6 @@ export const DashboardPage = () => {
     lastFetched,
     fetchAll,
     stopCodespace,
-    updateSettings,
   } = useDashboard();
 
   const sectionErrors = data ? Object.values(data.errors) : [];
@@ -73,10 +72,6 @@ export const DashboardPage = () => {
               codespaces={data.codespaces ?? []}
               notifyAfterMin={data.notifyAfterMin}
               onStop={stopCodespace}
-              notifyStartStop={data.settings.notifyStartStop}
-              onToggleNotifyStartStop={(v) =>
-                updateSettings({ notifyStartStop: v })
-              }
             />
             <RunsPanel runs={data.workflowRuns} />
             <ActionsPanel summary={data.billingSummary} />

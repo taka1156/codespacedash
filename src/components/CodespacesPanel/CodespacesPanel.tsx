@@ -18,7 +18,6 @@ import {
   csTop,
   csWarn,
   emptyState,
-  settingRow,
   stateAvailable,
   stateAvailableBadge,
   stateBadge,
@@ -30,9 +29,6 @@ import {
   stateStartingBadge,
   stateStopping,
   stateStoppingBadge,
-  switchOn,
-  switchThumb,
-  switchTrack,
 } from './style.css';
 
 const STATE_LABEL: Record<string, string> = {
@@ -128,56 +124,12 @@ interface Props {
   codespaces: Codespace[];
   notifyAfterMin: number;
   onStop: (name: string) => Promise<void>;
-  notifyStartStop: boolean;
-  onToggleNotifyStartStop: (value: boolean) => Promise<void>;
 }
-
-/** 起動・停止の通知のオン・オフ */
-const StartStopToggle = ({
-  value,
-  onChange,
-}: {
-  value: boolean;
-  onChange: (value: boolean) => Promise<void>;
-}) => {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const toggle = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      await onChange(!value);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <div className={settingRow}>
-      <span id="notify-start-stop-label">起動・停止を通知</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={value}
-        aria-labelledby="notify-start-stop-label"
-        className={clsx(switchTrack, value && switchOn)}
-        onClick={toggle}
-        disabled={busy}
-      >
-        <span className={switchThumb} />
-      </button>
-      {error && <span className={csWarn}>⚠️ {error}</span>}
-    </div>
-  );
-};
 
 export const CodespacesPanel = ({
   codespaces,
   notifyAfterMin,
   onStop,
-  notifyStartStop,
-  onToggleNotifyStartStop,
 }: Props) => {
   const [stopping, setStopping] = useState<string | null>(null);
   const [stopError, setStopError] = useState<string | null>(null);
@@ -204,10 +156,6 @@ export const CodespacesPanel = ({
   if (total === 0) {
     return (
       <BasePanel title="Codespaces" icon="⬡" subTitle={subTitle} badgeText="0">
-        <StartStopToggle
-          value={notifyStartStop}
-          onChange={onToggleNotifyStartStop}
-        />
         <div className={emptyState}>
           コードスペースはありません 🎉
           <br />
@@ -234,10 +182,6 @@ export const CodespacesPanel = ({
       subTitle={subTitle}
       badgeText={`${total}`}
     >
-      <StartStopToggle
-        value={notifyStartStop}
-        onChange={onToggleNotifyStartStop}
-      />
       {stopError && <p className={csWarn}>⚠️ {stopError}</p>}
       <div className={csList}>
         {sorted.map((cs) => {

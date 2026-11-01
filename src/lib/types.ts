@@ -1,6 +1,5 @@
 // 型の実体はサーバーと共有している shared/types.ts
 export type {
-  AppSettings,
   BillingUsageItem,
   BillingUsageSummary,
   Codespace,

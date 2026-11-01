@@ -105,12 +105,6 @@ export interface WorkflowRun {
   htmlUrl: string;
 }
 
-// アプリ内で切り替える設定（KV に保存し、定期チェックからも読む）
-export interface AppSettings {
-  /** Codespace の起動・停止を通知する */
-  notifyStartStop: boolean;
-}
-
 // GET /api/dashboard
 export interface DashboardResponse {
   user: GithubUser;
@@ -123,7 +117,6 @@ export interface DashboardResponse {
     Record<'codespaces' | 'runs' | 'billing' | 'copilot', string>
   >;
   notifyAfterMin: number;
-  settings: AppSettings;
   fetchedAt: string;
 }
 
