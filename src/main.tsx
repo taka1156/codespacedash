@@ -8,6 +8,13 @@ if (!container) {
   throw new Error('Root container not found');
 }
 
+// プッシュ通知用の Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch((e) => {
+    console.warn('Service Worker registration failed', e);
+  });
+}
+
 createRoot(container).render(
   <StrictMode>
     <App />

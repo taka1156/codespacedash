@@ -5,7 +5,10 @@ export const header = style({
   alignItems: 'center',
   justifyContent: 'space-between',
   padding: '0 28px',
-  height: '56px',
+  // PWA(standalone)でノッチ・ステータスバーに被らないように
+  paddingTop: 'env(safe-area-inset-top)',
+  minHeight: 'calc(56px + env(safe-area-inset-top))',
+  gap: 12,
   background: 'var(--bg-panel)',
   borderBottom: '1px solid var(--border)',
   position: 'sticky',
@@ -13,7 +16,8 @@ export const header = style({
   zIndex: 100,
   '@media': {
     '(max-width: 600px)': {
-      padding: '0 16px',
+      padding: '0 12px',
+      paddingTop: 'env(safe-area-inset-top)',
     },
   },
 });
@@ -42,9 +46,10 @@ export const headerTitle = style({
 export const headerRight = style({
   display: 'flex',
   alignItems: 'center',
+  gap: 10,
   '@media': {
     '(max-width: 600px)': {
-      display: 'none',
+      gap: 6,
     },
   },
 });
@@ -53,6 +58,11 @@ export const lastFetchedStyle = style({
   fontSize: '0.75rem',
   color: 'var(--text-dim)',
   fontFamily: 'var(--font-mono)',
+  '@media': {
+    '(max-width: 600px)': {
+      display: 'none',
+    },
+  },
 });
 
 export const btnRefresh = style({
@@ -108,17 +118,50 @@ export const username = style({
   },
 });
 
-export const btnLogout = style({
-  padding: '5px 14px',
+export const btnGhost = style({
+  padding: '5px 12px',
   borderRadius: 'var(--radius-sm)',
   background: 'transparent',
   border: '1px solid var(--border)',
   color: 'var(--text-muted)',
   fontSize: '0.8rem',
+  whiteSpace: 'nowrap',
+  textDecoration: 'none',
   transition: 'border-color 0.2s, color 0.2s',
+  selectors: {
+    '&:hover:not(:disabled)': {
+      borderColor: 'var(--border-bright)',
+      color: 'var(--text)',
+    },
+    '&:disabled': {
+      opacity: 0.5,
+      cursor: 'default',
+    },
+  },
 });
 
-export const btnLogoutHover = style({
-  borderColor: 'var(--border-bright)',
-  color: 'var(--text)',
+export const btnNotifyOn = style({
+  borderColor: 'rgba(74, 222, 128, 0.35)',
+  color: 'var(--green)',
+});
+
+export const hideOnMobile = style({
+  '@media': {
+    '(max-width: 600px)': {
+      display: 'none',
+    },
+  },
+});
+
+export const pushError = style({
+  position: 'absolute',
+  right: 16,
+  top: 'calc(100% + 6px)',
+  maxWidth: 320,
+  padding: '8px 12px',
+  borderRadius: 'var(--radius-sm)',
+  background: 'var(--bg-card)',
+  border: '1px solid rgba(248, 113, 113, 0.35)',
+  color: 'var(--red)',
+  fontSize: '0.78rem',
 });

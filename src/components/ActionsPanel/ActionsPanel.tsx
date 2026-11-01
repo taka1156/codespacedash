@@ -65,7 +65,7 @@ export const ActionsPanel = ({ summary }: Props) => {
           データを取得できませんでした
           <br />
           <small>
-            Fine-grained PAT に <code>Plan (read)</code> 権限が必要です
+            GITHUB_TOKEN に <code>Plan (read)</code> 権限が必要です
           </small>
         </div>
       </BasePanel>

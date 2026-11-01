@@ -1,3 +1,7 @@
+import { CSRF_HEADER, CSRF_VALUE } from '../../shared/types';
+
+// ブラウザは GitHub API を直接叩かない。自分の Worker(/api) が返す JSON だけを扱う。
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -7,23 +11,52 @@ export class ApiError extends Error {
   }
 }
 
-// path例: '/user', '/user/codespaces' など
-export const apiFetch = async <T = unknown>(
-  path: string,
-  token: string,
-  apiVersion = '2022-11-28',
-): Promise<T> => {
-  const res = await fetch(`https://api.github.com${path}`, {
+/** Cloudflare Access のセッションが切れたとき（ログイン画面へのリダイレクト） */
+export class SessionExpiredError extends ApiError {
+  constructor() {
+    super(
+      401,
+      'セッションが切れました。再読み込みしてログインし直してください',
+    );
+  }
+}
+
+const request = async <T>(path: string, init: RequestInit = {}) => {
+  const res = await fetch(`/api${path}`, {
+    ...init,
+    credentials: 'same-origin',
+    // Access の期限切れはログイン画面への 302 になる。追従すると CORS エラーで原因が分からないので止める
+    redirect: 'manual',
     headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': apiVersion,
-      'User-Agent': 'github-dashboard/1.0',
+      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      [CSRF_HEADER]: CSRF_VALUE,
+      ...init.headers,
     },
   });
-  const json = await res.json();
-  if (!res.ok) {
-    throw new ApiError(res.status, json.message || `HTTP ${res.status}`);
+
+  if (res.type === 'opaqueredirect' || res.status === 401) {
+    throw new SessionExpiredError();
   }
-  return json as T;
+
+  const body = (await res.json().catch(() => null)) as
+    | (T & { error?: string })
+    | null;
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `HTTP ${res.status}`);
+  }
+  return body as T;
+};
+
+export const api = {
+  get: <T>(path: string) => request<T>(path),
+  post: <T>(path: string, body?: unknown) =>
+    request<T>(path, {
+      method: 'POST',
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }),
+  delete: <T>(path: string, body?: unknown) =>
+    request<T>(path, {
+      method: 'DELETE',
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }),
 };

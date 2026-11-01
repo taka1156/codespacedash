@@ -1,21 +1,33 @@
 import clsx from 'clsx';
+import { useState } from 'react';
 import type { Codespace } from '@/lib/types';
 import { BasePanel } from '../shared/BasePanel/BasePanel';
 import {
+  csActions,
+  csBtn,
+  csBtnDanger,
   csDetail,
   csDetailSpan,
   csItem,
+  csItemForgotten,
   csList,
   csMeta,
   csName,
   csRepo,
   csTime,
   csTop,
+  csWarn,
   emptyState,
+  stateAvailable,
   stateAvailableBadge,
   stateBadge,
+  stateDot,
+  stateFailed,
   stateFailedBadge,
+  stateIdleBadge,
+  stateStarting,
   stateStartingBadge,
+  stateStopping,
   stateStoppingBadge,
 } from './style.css';
 
@@ -25,9 +37,55 @@ const STATE_LABEL: Record<string, string> = {
   Stopping: '停止中',
   Rebuilding: '再構築中',
   ShuttingDown: 'シャットダウン中',
+  Shutdown: '停止',
   Failed: 'エラー',
   Deleted: '削除済み',
   Unavailable: '利用不可',
+};
+
+type Tone = 'available' | 'starting' | 'stopping' | 'failed' | 'idle';
+
+const toneOf = (state: string): Tone => {
+  switch (state) {
+    case 'Available':
+      return 'available';
+    case 'Starting':
+    case 'Rebuilding':
+      return 'starting';
+    case 'Stopping':
+    case 'ShuttingDown':
+      return 'stopping';
+    case 'Failed':
+    case 'Deleted':
+    case 'Unavailable':
+      return 'failed';
+    default:
+      return 'idle';
+  }
+};
+
+const DOT: Record<Tone, string | undefined> = {
+  available: stateAvailable,
+  starting: stateStarting,
+  stopping: stateStopping,
+  failed: stateFailed,
+  idle: undefined,
+};
+
+const BADGE: Record<Tone, string | undefined> = {
+  available: stateAvailableBadge,
+  starting: stateStartingBadge,
+  stopping: stateStoppingBadge,
+  failed: stateFailedBadge,
+  idle: stateIdleBadge,
+};
+
+const ORDER: Record<Tone, number> = {
+  available: 0,
+  starting: 1,
+  stopping: 1,
+  failed: 2,
+  idle: 3,
 };
 
 const fmt = (bytes: number) => {
@@ -37,121 +95,177 @@ const fmt = (bytes: number) => {
     : `${(bytes / 1024 / 1024).toFixed(0)}MB`;
 };
 
-const fmtDate = (s: string | null) => {
+const minutesSince = (s: string | null) =>
+  s ? (Date.now() - new Date(s).getTime()) / 60_000 : 0;
+
+const fmtAgo = (s: string | null) => {
   if (!s) {
     return '—';
   }
-
-  const d = new Date(s);
-  const now = Date.now();
-  const diff = now - d.getTime();
-  const hours = Math.floor(diff / 3600000);
-
-  if (hours < 1) {
-    return `${Math.floor(diff / 60000)}分前`;
+  const min = minutesSince(s);
+  if (min < 60) {
+    return `${Math.floor(min)}分前`;
   }
-
-  if (hours < 24) {
-    return `${hours}時間前`;
+  if (min < 1440) {
+    return `${Math.floor(min / 60)}時間前`;
   }
+  return `${Math.floor(min / 1440)}日前`;
+};
 
-  return `${Math.floor(hours / 24)}日前`;
+const fmtUntil = (s: string | null) => {
+  if (!s) {
+    return null;
+  }
+  const days = (new Date(s).getTime() - Date.now()) / 86_400_000;
+  return days < 1 ? '1日以内' : `${Math.floor(days)}日後`;
 };
 
 interface Props {
   codespaces: Codespace[];
+  notifyAfterMin: number;
+  onStop: (name: string) => Promise<void>;
 }
 
-export const CodespacesPanel = ({ codespaces }: Props) => {
+export const CodespacesPanel = ({
+  codespaces,
+  notifyAfterMin,
+  onStop,
+}: Props) => {
+  const [stopping, setStopping] = useState<string | null>(null);
+  const [stopError, setStopError] = useState<string | null>(null);
+
   const running = codespaces.filter((c) => c.state === 'Available').length;
   const total = codespaces.length;
+  const subTitle = `${running} 稼働中 / ${total} 合計`;
 
-  if (codespaces.length === 0) {
+  const handleStop = async (cs: Codespace) => {
+    if (!confirm(`${cs.display_name || cs.name} を停止しますか？`)) {
+      return;
+    }
+    setStopping(cs.name);
+    setStopError(null);
+    try {
+      await onStop(cs.name);
+    } catch (e) {
+      setStopError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setStopping(null);
+    }
+  };
+
+  if (total === 0) {
     return (
-      <BasePanel
-        title="Codespaces"
-        icon="⬡"
-        subTitle={`${running} 稼働中 / ${total} 合計`}
-        badgeText={`${total}`}
-      >
+      <BasePanel title="Codespaces" icon="⬡" subTitle={subTitle} badgeText="0">
         <div className={emptyState}>
-          <div className={emptyState}>コードスペースが見つかりません</div>
+          コードスペースはありません 🎉
           <br />
           <small>
-            稼働中のコードスペースがないか、データを取得できませんでした
-            <br />
-            Fine-grained PAT に <code>Codespace</code> 権限が必要です
+            表示されるはずのものがない場合は、GITHUB_TOKEN に
+            <code>Codespaces (read)</code> 権限があるか確認してください
           </small>
         </div>
       </BasePanel>
     );
   }
 
+  const sorted = [...codespaces].sort(
+    (a, b) =>
+      ORDER[toneOf(a.state)] - ORDER[toneOf(b.state)] ||
+      new Date(b.last_used_at ?? 0).getTime() -
+        new Date(a.last_used_at ?? 0).getTime(),
+  );
+
   return (
     <BasePanel
       title="Codespaces"
       icon="⬡"
-      subTitle={`${running} 稼働中 / ${total} 合計`}
+      subTitle={subTitle}
       badgeText={`${total}`}
     >
+      {stopError && <p className={csWarn}>⚠️ {stopError}</p>}
       <div className={csList}>
-        {codespaces.map((cs) => (
-          <div key={cs.id} className={csItem}>
-            <div className={csTop}>
-              <span
-                className={clsx('state-dot', {
-                  [stateAvailableBadge]: cs.state === 'Available',
-                  [stateStartingBadge]:
-                    cs.state === 'Starting' || cs.state === 'Rebuilding',
-                  [stateStoppingBadge]:
-                    cs.state === 'Stopping' || cs.state === 'ShuttingDown',
-                  [stateFailedBadge]:
-                    cs.state === 'Failed' ||
-                    cs.state === 'Deleted' ||
-                    cs.state === 'Unavailable',
-                })}
-              />
-              <span className={csName}>{cs.display_name || cs.name}</span>
-              <span
-                className={clsx(stateBadge, {
-                  [stateAvailableBadge]: cs.state === 'Available',
-                  [stateStartingBadge]:
-                    cs.state === 'Starting' || cs.state === 'Rebuilding',
-                  [stateStoppingBadge]:
-                    cs.state === 'Stopping' || cs.state === 'ShuttingDown',
-                  [stateFailedBadge]:
-                    cs.state === 'Failed' ||
-                    cs.state === 'Deleted' ||
-                    cs.state === 'Unavailable',
-                })}
-              >
-                {STATE_LABEL[cs.state] ?? cs.state}
-              </span>
-            </div>
-            <div className={csMeta}>
-              <span className={csRepo}>{cs.repository.full_name}</span>
-              <span className={csDetail}>
-                {cs.machine ? (
-                  <>
-                    <span className={csDetailSpan}>{cs.machine.cpus}コア</span>
-                    <span className={csDetailSpan}>
-                      {fmt(cs.machine.memory_in_bytes)} RAM
-                    </span>
-                    <span className={csDetailSpan}>
-                      {fmt(cs.machine.storage_in_bytes)} ストレージ
-                    </span>
-                  </>
-                ) : (
-                  <span className={csDetailSpan}>マシン情報なし</span>
+        {sorted.map((cs) => {
+          const tone = toneOf(cs.state);
+          const forgotten =
+            tone === 'available' &&
+            minutesSince(cs.last_used_at) >= notifyAfterMin;
+          const deleteIn =
+            tone === 'available' ? null : fmtUntil(cs.retention_expires_at);
+
+          return (
+            <div
+              key={cs.id}
+              className={clsx(csItem, forgotten && csItemForgotten)}
+            >
+              <div className={csTop}>
+                <span className={clsx(stateDot, DOT[tone])} />
+                <span className={csName}>{cs.display_name || cs.name}</span>
+                <span className={clsx(stateBadge, BADGE[tone])}>
+                  {STATE_LABEL[cs.state] ?? cs.state}
+                </span>
+              </div>
+              <div className={csMeta}>
+                <span className={csRepo}>{cs.repository.full_name}</span>
+                <span className={csDetail}>
+                  {cs.machine ? (
+                    <>
+                      <span className={csDetailSpan}>
+                        {cs.machine.cpus}コア
+                      </span>
+                      <span className={csDetailSpan}>
+                        {fmt(cs.machine.memory_in_bytes)} RAM
+                      </span>
+                      <span className={csDetailSpan}>
+                        {fmt(cs.machine.storage_in_bytes)} ストレージ
+                      </span>
+                    </>
+                  ) : (
+                    <span className={csDetailSpan}>マシン情報なし</span>
+                  )}
+                  <span className={csDetailSpan}>{cs.location}</span>
+                </span>
+                <span className={csTime}>
+                  最終使用: {fmtAgo(cs.last_used_at)}
+                  {cs.idle_timeout_minutes
+                    ? ` ・ 自動停止 ${cs.idle_timeout_minutes}分`
+                    : ''}
+                  {deleteIn ? ` ・ 自動削除 ${deleteIn}` : ''}
+                </span>
+                {forgotten && (
+                  <span className={csWarn}>
+                    ⏰ {notifyAfterMin}
+                    分以上使われていません。つけっぱなしかもしれません
+                  </span>
                 )}
-                <span className={csDetailSpan}>{cs.location}</span>
-              </span>
-              <span className={csTime}>
-                最終使用: {fmtDate(cs.last_used_at)}
-              </span>
+                {cs.has_unpushed_changes && (
+                  <span className={csWarn}>
+                    ⚠ 未コミット/未プッシュの変更あり
+                  </span>
+                )}
+              </div>
+              <div className={csActions}>
+                <a
+                  className={csBtn}
+                  href={cs.web_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  開く
+                </a>
+                {tone === 'available' && (
+                  <button
+                    type="button"
+                    className={clsx(csBtn, csBtnDanger)}
+                    onClick={() => handleStop(cs)}
+                    disabled={stopping === cs.name}
+                  >
+                    {stopping === cs.name ? '停止中…' : '停止'}
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </BasePanel>
   );
