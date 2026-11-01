@@ -2,16 +2,12 @@ import type { BillingUsageSummary } from './types';
 
 // GitHub Free の個人アカウントの無料枠（毎月）。2コアのマシンを前提に表示する
 export const FREE_CORE_HOURS = 120; // = 2コアで60時間
-export const FREE_STORAGE_GB_MONTH = 15;
 const BASE_CORES = 2;
-const HOURS_PER_MONTH = 730;
 
 export interface QuotaUsage {
   /** 2コア換算の使用時間 */
   usedHours: number;
   freeHours: number;
-  usedStorage: number;
-  freeStorage: number;
 }
 
 const isStorage = (sku: string, unit: string) =>
@@ -33,14 +29,9 @@ export const codespacesQuota = (
   }
 
   let coreHours = 0;
-  let storage = 0;
   for (const i of items) {
-    if (isStorage(i.sku, i.unitType)) {
-      // GB-時間で来た場合は GB-月 に直す
-      storage += /hour/i.test(i.unitType)
-        ? i.grossQuantity / HOURS_PER_MONTH
-        : i.grossQuantity;
-    } else {
+    // ストレージは対象外（コンピューティング時間だけ数える）
+    if (!isStorage(i.sku, i.unitType)) {
       coreHours += i.grossQuantity * coresOf(i.sku);
     }
   }
@@ -48,7 +39,5 @@ export const codespacesQuota = (
   return {
     usedHours: coreHours / BASE_CORES,
     freeHours: FREE_CORE_HOURS / BASE_CORES,
-    usedStorage: storage,
-    freeStorage: FREE_STORAGE_GB_MONTH,
   };
 };

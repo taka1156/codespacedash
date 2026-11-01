@@ -184,12 +184,6 @@ const Quota = ({ summary }: { summary: BillingUsageSummary | null }) => {
         free={q.freeHours}
         unit="時間"
       />
-      <QuotaBar
-        label="ストレージ"
-        used={q.usedStorage}
-        free={q.freeStorage}
-        unit="GB-月"
-      />
     </div>
   );
 };
