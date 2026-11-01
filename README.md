@@ -9,7 +9,7 @@ Codespaces の消し忘れを PWA のプッシュ通知で知らせます。
 ブラウザ / PWA ──(Cloudflare Access)──▶ Cloudflare Worker
   React: 整形済み JSON を表示するだけ        ├ 静的配信: React のビルド成果物
   Service Worker: 通知の表示だけ             ├ Hono /api/*: GITHUB_TOKEN で GitHub API を呼ぶ
-                                             ├ Cron (15分ごと): 消し忘れ検知 → Web Push
+                                             ├ Cron (1分ごと): 起動・停止・消し忘れ検知 → Web Push
                                              └ KV: プッシュ購読・通知済みフラグ
 ```
 
@@ -107,5 +107,7 @@ Yarn は `package.json` の `packageManager`（`yarn@1.22.22`）、Node.js は `
 | `REMIND_EVERY_MIN` | `60`           | 同じ Codespace を再通知する間隔         |
 | `triggers.crons`   | `*/15 * * * *` | チェック頻度（UTC）                     |
 | `TIMEZONE`         | `Asia/Tokyo`   | 課金集計の「今月」の基準                |
+
+Codespace の起動・停止の通知は、ダッシュボードの Codespaces パネルにあるスイッチでオン・オフできます（標準はオン）。
 
 Cron と KV は Workers の無料枠で収まります。GitHub Actions の実行時間は使いません。

@@ -27,6 +27,7 @@ import {
   saveSubscription,
   sendToAll,
 } from './lib/push';
+import { getSettings, updateSettings } from './lib/settings';
 
 const api = new Hono<AppEnv>().basePath('/api');
 
@@ -53,6 +54,7 @@ api.get('/dashboard', async (c) => {
   const period = currentPeriod(c.env.TIMEZONE);
 
   // 1つ失敗しても他のパネルは表示できるよう個別に扱う
+  const settings = await getSettings(c.env);
   const [codespaces, runs, billing, copilot] = await Promise.allSettled([
     listCodespaces(c.env),
     listRecentRuns(c.env),
@@ -86,9 +88,14 @@ api.get('/dashboard', async (c) => {
     premiumRequests: copilot.status === 'fulfilled' ? copilot.value : null,
     errors,
     notifyAfterMin: numVar(c.env.NOTIFY_AFTER_MIN, 60),
+    settings,
     fetchedAt: new Date().toISOString(),
   });
 });
+
+api.post('/settings', async (c) =>
+  c.json(await updateSettings(c.env, await c.req.json().catch(() => null))),
+);
 
 api.post('/codespaces/:name/stop', async (c) => {
   await stopCodespace(c.env, c.req.param('name'));

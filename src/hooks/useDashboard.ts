@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, SessionExpiredError } from '@/lib/api';
-import type { DashboardResponse } from '@/lib/types';
+import type { AppSettings, DashboardResponse } from '@/lib/types';
 
 const REFRESH_MS = 60_000;
 
@@ -50,6 +50,11 @@ export const useDashboard = () => {
     [fetchAll],
   );
 
+  const updateSettings = useCallback(async (patch: Partial<AppSettings>) => {
+    const settings = await api.post<AppSettings>('/settings', patch);
+    setData((d) => (d ? { ...d, settings } : d));
+  }, []);
+
   useEffect(() => {
     fetchAll();
     const timer = setInterval(() => {
@@ -97,5 +102,6 @@ export const useDashboard = () => {
     lastFetched: data ? new Date(data.fetchedAt) : null,
     fetchAll,
     stopCodespace,
+    updateSettings,
   };
 };

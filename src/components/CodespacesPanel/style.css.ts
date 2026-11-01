@@ -179,3 +179,61 @@ export const stateIdleBadge = style({
   background: 'rgba(255, 255, 255, 0.05)',
   color: 'var(--text-muted)',
 });
+
+export const settingRow = style({
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  flexWrap: 'wrap',
+  fontSize: '0.8rem',
+  color: 'var(--text-muted)',
+  marginBottom: 12,
+});
+
+export const switchTrack = style({
+  position: 'relative',
+  width: 36,
+  height: 20,
+  flexShrink: 0,
+  borderRadius: 999,
+  border: '1px solid var(--border-bright)',
+  background: 'var(--bg-card)',
+  transition: 'background 0.15s, border-color 0.15s',
+  selectors: {
+    '&:focus-visible': {
+      outline: '2px solid var(--cyan)',
+      outlineOffset: 2,
+    },
+    '&:disabled': {
+      opacity: 0.6,
+      cursor: 'default',
+    },
+  },
+});
+
+export const switchOn = style({
+  background: 'rgba(74, 222, 128, 0.25)',
+  borderColor: 'rgba(74, 222, 128, 0.5)',
+});
+
+export const switchThumb = style({
+  position: 'absolute',
+  top: 2,
+  left: 2,
+  width: 14,
+  height: 14,
+  borderRadius: '50%',
+  background: 'var(--text-muted)',
+  transition: 'transform 0.15s, background 0.15s',
+  selectors: {
+    [`${switchOn} &`]: {
+      transform: 'translateX(16px)',
+      background: 'var(--green)',
+    },
+  },
+  '@media': {
+    '(prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
+  },
+});
