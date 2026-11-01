@@ -46,11 +46,12 @@ localhost では Access の検証をスキップします。プッシュ通知�
 | --------------- | -------------------------------------------------------- |
 | `Actions: Read` | Actions 実行履歴（最近 push した15リポジトリの直近10件） |
 
-### 2. KV と鍵の準備
+### 2. 鍵の準備
+
+プッシュ購読の保存先（KV）は初回デプロイ時に自動で作られるので、準備は不要です。
 
 ```bash
 npx wrangler login
-npx wrangler kv namespace create KV    # 出力された id を wrangler.jsonc の kv_namespaces に記入
 yarn vapid                             # VAPID 鍵を生成（Public Key と Private Key(JWK) が出力される）
 ```
 
@@ -67,9 +68,19 @@ npx wrangler secret put VAPID_PRIVATE_JWK   # Private Key の JSON を1行のま
 
 ### 3. デプロイ
 
+手元から:
+
 ```bash
 yarn deploy
 ```
+
+Cloudflare ダッシュボードの Git 連携（Workers Builds）を使う場合は、ビルド構成を以下にします。
+
+| 項目 | 値 |
+|------|------|
+| ビルドコマンド | `yarn run build` |
+| デプロイコマンド | `npx wrangler deploy` |
+| ルートディレクトリ | `/` |
 
 ### 4. Cloudflare Access（Zero Trust）
 

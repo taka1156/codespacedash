@@ -20,13 +20,9 @@
 
   "observability": { "enabled": true },
 
-  "kv_namespaces": [
-    {
-      "binding": "KV",
-      // npx wrangler kv namespace create KV で作成したIDに置き換える
-      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
-    }
-  ],
+  // id を書かないと、初回デプロイ時に Wrangler が KV を自動作成して紐付ける
+  // （2回目以降は同じ KV を使い続ける）
+  "kv_namespaces": [{ "binding": "KV" }],
 
   "vars": {
     "ACCESS_TEAM_DOMAIN": "",
