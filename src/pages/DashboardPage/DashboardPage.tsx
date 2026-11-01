@@ -71,6 +71,7 @@ export const DashboardPage = () => {
               codespaces={data.codespaces ?? []}
               notifyAfterMin={data.notifyAfterMin}
               onStop={stopCodespace}
+              billingSummary={data.billingSummary}
             />
             <ActionsPanel
               summary={data.billingSummary}

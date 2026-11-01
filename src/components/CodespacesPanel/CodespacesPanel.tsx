@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { useState } from 'react';
-import type { Codespace } from '@/lib/types';
+import { codespacesQuota } from '@/lib/codespacesQuota';
+import type { BillingUsageSummary, Codespace } from '@/lib/types';
 import { BasePanel } from '../shared/BasePanel/BasePanel';
 import {
   csActions,
@@ -18,6 +19,15 @@ import {
   csTop,
   csWarn,
   emptyState,
+  quotaBox,
+  quotaFill,
+  quotaHead,
+  quotaLow,
+  quotaOk,
+  quotaRow,
+  quotaTrack,
+  quotaValue,
+  quotaWarn,
   stateAvailable,
   stateAvailableBadge,
   stateBadge,
@@ -124,12 +134,71 @@ interface Props {
   codespaces: Codespace[];
   notifyAfterMin: number;
   onStop: (name: string) => Promise<void>;
+  billingSummary: BillingUsageSummary | null;
 }
+
+const fmtNum = (n: number) =>
+  n < 10 ? n.toFixed(1) : Math.round(n).toString();
+
+/** 無料枠の残りを1本のバーで表す */
+const QuotaBar = ({
+  label,
+  used,
+  free,
+  unit,
+}: {
+  label: string;
+  used: number;
+  free: number;
+  unit: string;
+}) => {
+  const left = Math.max(0, free - used);
+  const pct = Math.round((left / free) * 100);
+  const level = pct > 50 ? quotaOk : pct > 20 ? quotaWarn : quotaLow;
+  return (
+    <div className={quotaRow}>
+      <div className={quotaHead}>
+        <span>{label}</span>
+        <span className={quotaValue}>
+          残り {fmtNum(left)} / {free} {unit} ・ <b>{pct}%</b>
+        </span>
+      </div>
+      {/* 数値は上の文字で出しているので、バーは見た目だけ */}
+      <div className={quotaTrack} aria-hidden="true">
+        <div className={clsx(quotaFill, level)} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+};
+
+const Quota = ({ summary }: { summary: BillingUsageSummary | null }) => {
+  const q = codespacesQuota(summary);
+  if (!q) {
+    return null;
+  }
+  return (
+    <div className={quotaBox}>
+      <QuotaBar
+        label="無料枠（2コア換算）"
+        used={q.usedHours}
+        free={q.freeHours}
+        unit="時間"
+      />
+      <QuotaBar
+        label="ストレージ"
+        used={q.usedStorage}
+        free={q.freeStorage}
+        unit="GB-月"
+      />
+    </div>
+  );
+};
 
 export const CodespacesPanel = ({
   codespaces,
   notifyAfterMin,
   onStop,
+  billingSummary,
 }: Props) => {
   const [stopping, setStopping] = useState<string | null>(null);
   const [stopError, setStopError] = useState<string | null>(null);
@@ -156,6 +225,7 @@ export const CodespacesPanel = ({
   if (total === 0) {
     return (
       <BasePanel title="Codespaces" icon="⬡" subTitle={subTitle} badgeText="0">
+        <Quota summary={billingSummary} />
         <div className={emptyState}>
           コードスペースはありません 🎉
           <br />
@@ -182,6 +252,7 @@ export const CodespacesPanel = ({
       subTitle={subTitle}
       badgeText={`${total}`}
     >
+      <Quota summary={billingSummary} />
       {stopError && <p className={csWarn}>⚠️ {stopError}</p>}
       <div className={csList}>
         {sorted.map((cs) => {
