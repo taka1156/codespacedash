@@ -107,3 +107,29 @@ export const time = style({
   whiteSpace: 'nowrap',
   textAlign: 'right',
 });
+
+export const section = style({
+  marginTop: 20,
+  paddingTop: 16,
+  borderTop: '1px solid var(--border)',
+});
+
+export const sectionHead = style({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: '4px 12px',
+  fontSize: '0.75rem',
+  color: 'var(--text-muted)',
+  letterSpacing: '0.08em',
+  fontFamily: 'var(--font-mono)',
+  marginBottom: 6,
+});
+
+export const sectionNote = style({
+  fontSize: '0.7rem',
+  letterSpacing: 0,
+  color: 'var(--text-dim)',
+  fontFamily: 'var(--font-sans)',
+});

@@ -2,7 +2,6 @@ import { ActionsPanel } from '@/components/ActionsPanel/ActionsPanel';
 import { CodespacesPanel } from '@/components/CodespacesPanel/CodespacesPanel';
 import { CopilotPanel } from '@/components/CopilotPanel/CopilotPanel';
 import { Header } from '@/components/Header/Header';
-import { RunsPanel } from '@/components/RunsPanel/RunsPanel';
 import { useDashboard } from '@/hooks/useDashboard';
 import {
   app,
@@ -73,8 +72,10 @@ export const DashboardPage = () => {
               notifyAfterMin={data.notifyAfterMin}
               onStop={stopCodespace}
             />
-            <RunsPanel runs={data.workflowRuns} />
-            <ActionsPanel summary={data.billingSummary} />
+            <ActionsPanel
+              summary={data.billingSummary}
+              runs={data.workflowRuns}
+            />
             <CopilotPanel premiumRequests={data.premiumRequests} />
           </div>
         )}

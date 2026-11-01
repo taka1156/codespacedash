@@ -1,6 +1,5 @@
 import clsx from 'clsx';
 import type { WorkflowRun } from '@/lib/types';
-import { BasePanel } from '../shared/BasePanel/BasePanel';
 import {
   emptyState,
   icon,
@@ -13,10 +12,13 @@ import {
   metaRepo,
   runItem,
   runList,
+  section,
+  sectionHead,
+  sectionNote,
   time,
   title,
   workflow,
-} from './style.css';
+} from './runHistory.css';
 
 const EVENT_LABEL: Record<string, string> = {
   push: 'push',
@@ -88,30 +90,26 @@ interface Props {
   runs: WorkflowRun[] | null;
 }
 
-export const RunsPanel = ({ runs }: Props) => {
+/** Actions パネルの下半分：直近の実行履歴 */
+export const RunHistory = ({ runs }: Props) => {
   const list = runs ?? [];
   const failed = list.filter((r) => kindOf(r) === 'failure').length;
   const running = list.filter((r) =>
     ['running', 'queued'].includes(kindOf(r)),
   ).length;
-
-  const subTitle = runs
-    ? [
-        running ? `${running} 実行中` : null,
-        failed ? `${failed} 失敗` : null,
-        '最近pushした15リポジトリ',
-      ]
-        .filter(Boolean)
-        .join(' / ')
-    : undefined;
+  const counts = [
+    running ? `${running} 実行中` : null,
+    failed ? `${failed} 失敗` : null,
+  ]
+    .filter(Boolean)
+    .join(' / ');
 
   return (
-    <BasePanel
-      title="Actions 実行履歴"
-      icon="▶"
-      subTitle={subTitle}
-      badgeText={runs ? `${list.length}件` : undefined}
-    >
+    <div className={section}>
+      <p className={sectionHead}>
+        実行履歴{counts ? ` · ${counts}` : ''}
+        <span className={sectionNote}>最近pushした15リポジトリ</span>
+      </p>
       {runs === null ? (
         <div className={emptyState}>
           データを取得できませんでした
@@ -153,6 +151,6 @@ export const RunsPanel = ({ runs }: Props) => {
           })}
         </div>
       )}
-    </BasePanel>
+    </div>
   );
 };
