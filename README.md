@@ -55,16 +55,14 @@ npx wrangler login
 yarn vapid                             # VAPID 鍵を生成（Public Key と Private Key(JWK) が出力される）
 ```
 
-`wrangler.jsonc` の `vars` に記入:
-- `VAPID_PUBLIC_KEY`: 上で出た Public Key
-- `VAPID_SUBJECT`: `mailto:自分のメールアドレス`
+Cloudflare ダッシュボードの Worker の **設定 → 変数とシークレット** に追加します（`wrangler.jsonc` には書きません。`keep_vars: true` なのでデプロイしても消えません）。
 
-Secret を登録:
-
-```bash
-npx wrangler secret put GITHUB_TOKEN
-npx wrangler secret put VAPID_PRIVATE_JWK   # Private Key の JSON を1行のまま貼る
-```
+| 名前 | 種類 | 値 |
+|------|------|------|
+| `GITHUB_TOKEN` | シークレット | 手順1で作ったトークン |
+| `VAPID_PRIVATE_JWK` | シークレット | 上で出た Private Key の JSON（1行のまま） |
+| `VAPID_PUBLIC_KEY` | テキスト | 上で出た Public Key |
+| `VAPID_SUBJECT` | テキスト | `https://自分のサイト` か `mailto:メールアドレス`（プッシュ配信サービス向けの連絡先。端末には表示されません） |
 
 ### 3. デプロイ
 
@@ -90,7 +88,7 @@ Yarn は `package.json` の `packageManager`（`yarn@1.22.22`）、Node.js は `
 2. ドメインに Worker のホスト名（`codespacedash.<account>.workers.dev` またはカスタムドメイン）を指定
 3. ポリシーで自分のメールアドレスだけを許可
 4. **Session Duration** は長め（例: 1 month）がおすすめ。PWA で毎回ログインせずに済みます
-5. 作成後に表示される **Application Audience (AUD) Tag** と、チームドメイン（`<team>.cloudflareaccess.com`）を `wrangler.jsonc` の `ACCESS_AUD` / `ACCESS_TEAM_DOMAIN` に記入して、もう一度 `yarn deploy`
+5. 作成後に表示される **Application Audience (AUD) Tag** を `ACCESS_AUD`、チームドメイン（`<team>.cloudflareaccess.com`）を `ACCESS_TEAM_DOMAIN` として、変数とシークレットに追加（テキスト）
 
 > `ACCESS_AUD` / `ACCESS_TEAM_DOMAIN` を設定するまで、API はローカル以外すべて 500 を返します（設定漏れで公開されないための挙動です）。
 

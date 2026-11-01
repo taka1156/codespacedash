@@ -24,17 +24,20 @@
   // （2回目以降は同じ KV を使い続ける）
   "kv_namespaces": [{ "binding": "KV" }],
 
+  // ダッシュボードで設定した変数をデプロイで消さない
+  "keep_vars": true,
+
+  // 人によって違う値はここに書かず、ダッシュボードの「設定 → 変数とシークレット」で設定する:
+  //   ACCESS_TEAM_DOMAIN  例: yourteam.cloudflareaccess.com
+  //   ACCESS_AUD          Access アプリケーションの AUD タグ
+  //   VAPID_PUBLIC_KEY    yarn vapid で出た Public Key
+  //   VAPID_SUBJECT       https://自分のサイト または mailto:メールアドレス
+  // シークレット（種類を「シークレット」にする）:
+  //   GITHUB_TOKEN
+  //   VAPID_PRIVATE_JWK
   "vars": {
-    "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD": "",
-    "VAPID_PUBLIC_KEY": "",
-    "VAPID_SUBJECT": "",
     "NOTIFY_AFTER_MIN": "60",
     "REMIND_EVERY_MIN": "60",
     "TIMEZONE": "Asia/Tokyo"
   }
-
-  // Secrets（ここには書かない）:
-  //   npx wrangler secret put GITHUB_TOKEN
-  //   npx wrangler secret put VAPID_PRIVATE_JWK
 }
