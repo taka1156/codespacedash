@@ -26,22 +26,14 @@
     fill="#FFFFFF"
   >⬡</text>
 
-  <!-- テキスト "DevDash" -->
-  <!-- "Dev" -->
+  <!-- "Codespace" + "Dash" を1つのテキストにまとめ、フォント幅が違っても textLength で枠内に収める -->
   <text
     x="70" y="50"
+    textLength="224"
+    lengthAdjust="spacingAndGlyphs"
     font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
     font-size="30"
     font-weight="600"
     fill="#FFFFFF"
-  >Codespace</text>
-
-  <!-- "Dash" -->
-  <text
-    x="225" y="50"
-    font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-    font-size="30"
-    font-weight="600"
-    fill="#3BA9FF"
-  >Dash</text>
+  >Codespace<tspan fill="#3BA9FF">Dash</tspan></text>
 </svg>

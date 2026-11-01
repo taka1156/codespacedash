@@ -31,6 +31,13 @@ export const headerLeft = style({
 export const headerLogo = style({
   width: '130px',
   height: '50px',
+  // 右側のボタンが長くてもロゴを押し縮めない
+  flexShrink: 0,
+  '@media': {
+    '(max-width: 380px)': {
+      width: '112px',
+    },
+  },
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

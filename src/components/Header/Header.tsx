@@ -59,7 +59,7 @@ const PushButton = () => {
           disabled={busy}
           title="この端末の通知をオフにする"
         >
-          🔔 通知オン
+          🔔<span className={hideOnMobile}> 通知オン</span>
         </button>
         {error && <div className={pushError}>{error}</div>}
       </>
@@ -74,8 +74,9 @@ const PushButton = () => {
           className={btnGhost}
           onClick={subscribe}
           disabled={busy}
+          title="この端末の通知を有効にする"
         >
-          🔕 通知を有効化
+          🔕<span className={hideOnMobile}> 通知を有効化</span>
         </button>
         {error && <div className={pushError}>{error}</div>}
       </>
