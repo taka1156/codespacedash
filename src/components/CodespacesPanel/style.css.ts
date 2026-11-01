@@ -220,5 +220,4 @@ export const quotaFill = style({
 });
 
 export const quotaOk = style({ background: 'var(--green)' });
-export const quotaWarn = style({ background: 'var(--yellow)' });
 export const quotaLow = style({ background: 'var(--red)' });

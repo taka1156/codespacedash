@@ -27,7 +27,6 @@ import {
   quotaRow,
   quotaTrack,
   quotaValue,
-  quotaWarn,
   stateAvailable,
   stateAvailableBadge,
   stateBadge,
@@ -140,7 +139,7 @@ interface Props {
 const fmtNum = (n: number) =>
   n < 10 ? n.toFixed(1) : Math.round(n).toString();
 
-/** 無料枠の残りを1本のバーで表す */
+/** 無料枠の使用量を1本のバーで表す */
 const QuotaBar = ({
   label,
   used,
@@ -152,20 +151,23 @@ const QuotaBar = ({
   free: number;
   unit: string;
 }) => {
-  const left = Math.max(0, free - used);
-  const pct = Math.round((left / free) * 100);
-  const level = pct > 50 ? quotaOk : pct > 20 ? quotaWarn : quotaLow;
+  // 使った量を表示する（0%から増える）。8割を超えたら赤
+  const pct = Math.round((used / free) * 100);
+  const level = pct > 80 ? quotaLow : quotaOk;
   return (
     <div className={quotaRow}>
       <div className={quotaHead}>
         <span>{label}</span>
         <span className={quotaValue}>
-          残り {fmtNum(left)} / {free} {unit} ・ <b>{pct}%</b>
+          使用 {fmtNum(used)} / {free} {unit} ・ <b>{pct}%</b>
         </span>
       </div>
       {/* 数値は上の文字で出しているので、バーは見た目だけ */}
       <div className={quotaTrack} aria-hidden="true">
-        <div className={clsx(quotaFill, level)} style={{ width: `${pct}%` }} />
+        <div
+          className={clsx(quotaFill, level)}
+          style={{ width: `${Math.min(100, pct)}%` }}
+        />
       </div>
     </div>
   );
