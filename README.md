@@ -82,6 +82,8 @@ Cloudflare ダッシュボードの Git 連携（Workers Builds）を使う場�
 | デプロイコマンド | `npx wrangler deploy` |
 | ルートディレクトリ | `/` |
 
+Yarn は `package.json` の `packageManager`（`yarn@1.22.22`）、Node.js は `.node-version`（24）で固定しています。Workers Builds の既定は Yarn 4 で、Yarn 1 形式の `yarn.lock` だとインストールで失敗するため、この指定は消さないでください。
+
 ### 4. Cloudflare Access（Zero Trust）
 
 1. Zero Trust ダッシュボード → **Access → Applications → Add an application → Self-hosted**
