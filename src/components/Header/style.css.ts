@@ -90,6 +90,11 @@ const spin = keyframes({
   },
 });
 
+export const refreshIcon = style({
+  display: 'inline-block',
+  lineHeight: 1,
+});
+
 export const btnRefreshSpinning = style({
   animation: `${spin} 0.7s linear infinite`,
 });

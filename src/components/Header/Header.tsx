@@ -14,6 +14,7 @@ import {
   hideOnMobile,
   lastFetchedStyle,
   pushError,
+  refreshIcon,
   userInfo,
   username,
 } from './style.css';
@@ -109,12 +110,15 @@ export const Header = ({ user, onRefresh, loading, lastFetched }: Props) => (
       )}
       <button
         type="button"
-        className={clsx(btnRefresh, loading && btnRefreshSpinning)}
+        className={btnRefresh}
         onClick={onRefresh}
         disabled={loading}
         title="更新"
       >
-        ↻
+        {/* ボタンではなくアイコンだけを回す */}
+        <span className={clsx(refreshIcon, loading && btnRefreshSpinning)}>
+          ↻
+        </span>
       </button>
       <PushButton />
       {user && (
