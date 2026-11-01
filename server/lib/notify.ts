@@ -35,10 +35,14 @@ export const checkForgottenCodespaces = async (env: Env) => {
       continue; // 再通知間隔内
     }
     const result = await sendToAll(env, {
-      title: 'Codespace がつけっぱなしです',
+      title:
+        forgotten.length > 1
+          ? `Codespace がつけっぱなしです（${forgotten.length}台）`
+          : 'Codespace がつけっぱなしです',
       body: `${cs.display_name || cs.name}（${cs.repository.full_name}）最終使用から${fmtElapsed(minutesSince(cs.last_used_at))}`,
       url: '/',
       tag: `cs-${cs.id}`,
+      badge: forgotten.length,
     });
     console.log('notified', cs.name, result);
     // Cron の実行タイミングのズレで1回飛ばさないよう少し短めにする（KV の最小TTLは60秒）

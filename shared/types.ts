@@ -141,6 +141,8 @@ export interface PushPayload {
   body: string;
   url: string;
   tag: string;
+  /** アプリアイコンのバッジに出す数（つけっぱなしの台数）。省略時はバッジを変えない */
+  badge?: number;
 }
 
 // 非GETの /api/* に必須のヘッダー（CSRF対策：カスタムヘッダーはクロスオリジンでは送れない）

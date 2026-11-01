@@ -19,7 +19,19 @@ self.addEventListener('push', (event) => {
   }
 
   const title = data.title || 'CodespaceDash';
-  event.waitUntil(
+  const tasks = [];
+
+  // アプリアイコンのバッジ（つけっぱなしの台数）
+  if (typeof data.badge === 'number' && 'setAppBadge' in self.navigator) {
+    tasks.push(
+      (data.badge > 0
+        ? self.navigator.setAppBadge(data.badge)
+        : self.navigator.clearAppBadge()
+      ).catch(() => {}),
+    );
+  }
+
+  tasks.push(
     self.registration.showNotification(title, {
       body: data.body || '',
       icon: '/icons/icon-192.png',
@@ -29,6 +41,7 @@ self.addEventListener('push', (event) => {
       data: { url: data.url || '/' },
     }),
   );
+  event.waitUntil(Promise.all(tasks));
 });
 
 self.addEventListener('notificationclick', (event) => {

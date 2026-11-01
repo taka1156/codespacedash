@@ -4,6 +4,16 @@ import type { DashboardResponse } from '@/lib/types';
 
 const REFRESH_MS = 60_000;
 
+// Badging API（インストールしたPWAのアイコンに数字を出す）。非対応環境では何もしない
+const setAppBadge = (count: number) => {
+  const nav = navigator as Navigator & {
+    setAppBadge?: (n?: number) => Promise<void>;
+    clearAppBadge?: () => Promise<void>;
+  };
+  const p = count > 0 ? nav.setAppBadge?.(count) : nav.clearAppBadge?.();
+  p?.catch(() => {});
+};
+
 export const useDashboard = () => {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -59,11 +69,24 @@ export const useDashboard = () => {
     };
   }, [fetchAll]);
 
-  // タブのタイトルに稼働中の台数を出す
+  // タブのタイトルに稼働中の台数、アプリアイコンのバッジにつけっぱなしの台数を出す
   useEffect(() => {
-    const running =
-      data?.codespaces?.filter((c) => c.state === 'Available').length ?? 0;
+    if (!data?.codespaces) {
+      return;
+    }
+    const running = data.codespaces.filter(
+      (c) => c.state === 'Available',
+    ).length;
     document.title = running ? `(${running}) CodespaceDash` : 'CodespaceDash';
+
+    const forgotten = data.codespaces.filter(
+      (c) =>
+        c.state === 'Available' &&
+        c.last_used_at &&
+        (Date.now() - new Date(c.last_used_at).getTime()) / 60_000 >=
+          data.notifyAfterMin,
+    ).length;
+    setAppBadge(forgotten);
   }, [data]);
 
   return {
