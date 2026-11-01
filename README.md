@@ -34,11 +34,17 @@ localhost では Access の検証をスキップします。プッシュ通知�
 
 [Fine-grained token を作成](https://github.com/settings/personal-access-tokens/new)し、**Account permissions** に以下を付けます。
 
-| 権限 | 用途 |
-|------|------|
-| `Codespaces: Read` | Codespaces 一覧 |
+| 権限                                         | 用途                           |
+| -------------------------------------------- | ------------------------------ |
+| `Codespaces: Read`                           | Codespaces 一覧                |
 | `Codespaces lifecycle admin: Read and write` | 停止ボタン（使わないなら不要） |
-| `Plan: Read` | Actions・Copilot の課金情報 |
+| `Plan: Read`                                 | Actions・Copilot の課金情報    |
+
+**Repository access** は「All repositories」にして、**Repository permissions** に以下を付けます。
+
+| 権限            | 用途                                                     |
+| --------------- | -------------------------------------------------------- |
+| `Actions: Read` | Actions 実行履歴（最近 push した15リポジトリの直近10件） |
 
 ### 2. KV と鍵の準備
 
@@ -49,7 +55,6 @@ yarn vapid                             # VAPID 鍵を生成（Public Key と Pri
 ```
 
 `wrangler.jsonc` の `vars` に記入:
-
 - `VAPID_PUBLIC_KEY`: 上で出た Public Key
 - `VAPID_SUBJECT`: `mailto:自分のメールアドレス`
 
@@ -85,11 +90,11 @@ yarn deploy
 
 `wrangler.jsonc` で変更できます。
 
-| 項目 | 既定 | 内容 |
-|------|------|------|
-| `NOTIFY_AFTER_MIN` | `60` | 最終使用からこの分数以上 起動中なら通知 |
-| `REMIND_EVERY_MIN` | `60` | 同じ Codespace を再通知する間隔 |
-| `triggers.crons` | `*/15 * * * *` | チェック頻度（UTC） |
-| `TIMEZONE` | `Asia/Tokyo` | 課金集計の「今月」の基準 |
+| 項目               | 既定           | 内容                                    |
+| ------------------ | -------------- | --------------------------------------- |
+| `NOTIFY_AFTER_MIN` | `60`           | 最終使用からこの分数以上 起動中なら通知 |
+| `REMIND_EVERY_MIN` | `60`           | 同じ Codespace を再通知する間隔         |
+| `triggers.crons`   | `*/15 * * * *` | チェック頻度（UTC）                     |
+| `TIMEZONE`         | `Asia/Tokyo`   | 課金集計の「今月」の基準                |
 
 Cron と KV は Workers の無料枠で収まります。GitHub Actions の実行時間は使いません。

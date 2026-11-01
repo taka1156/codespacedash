@@ -16,6 +16,7 @@ import {
   getPremiumRequests,
   getUser,
   listCodespaces,
+  listRecentRuns,
   stopCodespace,
 } from './lib/github';
 import { checkForgottenCodespaces } from './lib/notify';
@@ -52,18 +53,23 @@ api.get('/dashboard', async (c) => {
   const period = currentPeriod(c.env.TIMEZONE);
 
   // 1つ失敗しても他のパネルは表示できるよう個別に扱う
-  const [codespaces, billing, copilot] = await Promise.allSettled([
+  const [codespaces, runs, billing, copilot] = await Promise.allSettled([
     listCodespaces(c.env),
+    listRecentRuns(c.env),
     getBillingSummary(c.env, user.login, period),
     getPremiumRequests(c.env, user.login, period),
   ]);
 
   const errors: DashboardResponse['errors'] = {};
   const cErr = message(codespaces);
+  const rErr = message(runs);
   const bErr = message(billing);
   const pErr = message(copilot);
   if (cErr) {
     errors.codespaces = cErr;
+  }
+  if (rErr) {
+    errors.runs = rErr;
   }
   if (bErr) {
     errors.billing = bErr;
@@ -75,6 +81,7 @@ api.get('/dashboard', async (c) => {
   return c.json<DashboardResponse>({
     user,
     codespaces: codespaces.status === 'fulfilled' ? codespaces.value : null,
+    workflowRuns: runs.status === 'fulfilled' ? runs.value : null,
     billingSummary: billing.status === 'fulfilled' ? billing.value : null,
     premiumRequests: copilot.status === 'fulfilled' ? copilot.value : null,
     errors,

@@ -71,14 +71,51 @@ export interface PremiumRequestUsage {
   usageItems: PremiumRequestItem[];
 }
 
+// Actions の実行履歴（最近 push された上位リポジトリから集約）
+export interface WorkflowRun {
+  id: number;
+  repo: string;
+  workflowName: string;
+  title: string;
+  branch: string | null;
+  event: string;
+  status:
+    | 'queued'
+    | 'in_progress'
+    | 'completed'
+    | 'waiting'
+    | 'requested'
+    | 'pending'
+    | (string & {});
+  conclusion:
+    | 'success'
+    | 'failure'
+    | 'cancelled'
+    | 'skipped'
+    | 'timed_out'
+    | 'action_required'
+    | 'neutral'
+    | 'startup_failure'
+    | (string & {})
+    | null;
+  runNumber: number;
+  createdAt: string;
+  startedAt: string | null;
+  updatedAt: string;
+  htmlUrl: string;
+}
+
 // GET /api/dashboard
 export interface DashboardResponse {
   user: GithubUser;
   codespaces: Codespace[] | null;
+  workflowRuns: WorkflowRun[] | null;
   billingSummary: BillingUsageSummary | null;
   premiumRequests: PremiumRequestUsage | null;
   // 取得に失敗したセクションだけメッセージが入る（他のセクションは表示を続ける）
-  errors: Partial<Record<'codespaces' | 'billing' | 'copilot', string>>;
+  errors: Partial<
+    Record<'codespaces' | 'runs' | 'billing' | 'copilot', string>
+  >;
   notifyAfterMin: number;
   fetchedAt: string;
 }

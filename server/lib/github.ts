@@ -5,6 +5,7 @@ import type {
   GithubUser,
   PremiumRequestItem,
   PremiumRequestUsage,
+  WorkflowRun,
 } from '../../shared/types';
 import type { Env } from '../env';
 
@@ -189,4 +190,122 @@ export const getPremiumRequests = async (
       (i): PremiumRequestItem => ({ ...pickItem(i), model: i.model }),
     ),
   };
+};
+
+// ── Actions 実行履歴 ──
+
+interface RawRepo {
+  full_name: string;
+  archived: boolean;
+  disabled?: boolean;
+}
+
+interface RawRun {
+  id: number;
+  name: string | null;
+  display_title: string;
+  head_branch: string | null;
+  event: string;
+  status: string;
+  conclusion: string | null;
+  run_number: number;
+  created_at: string;
+  run_started_at?: string | null;
+  updated_at: string;
+  html_url: string;
+}
+
+const RUNS_REPO_LIMIT = 15;
+const RUNS_PER_REPO = 5;
+const RUNS_LIMIT = 10;
+const RUNS_CACHE_SEC = 60;
+
+const toRun = (repo: string, r: RawRun): WorkflowRun => ({
+  id: r.id,
+  repo,
+  workflowName: r.name ?? 'workflow',
+  title: r.display_title,
+  branch: r.head_branch,
+  event: r.event,
+  status: r.status,
+  conclusion: r.conclusion,
+  runNumber: r.run_number,
+  createdAt: r.created_at,
+  startedAt: r.run_started_at ?? null,
+  updatedAt: r.updated_at,
+  htmlUrl: r.html_url,
+});
+
+const fetchRecentRuns = async (env: Env): Promise<WorkflowRun[]> => {
+  // 最近 push された自分のリポジトリ上位から集める（API に「全リポジトリの実行履歴」はない）
+  const repos = (
+    await gh<RawRepo[]>(
+      env,
+      `/user/repos?affiliation=owner&sort=pushed&direction=desc&per_page=${RUNS_REPO_LIMIT + 5}`,
+    )
+  )
+    .filter((r) => !r.archived && !r.disabled)
+    .slice(0, RUNS_REPO_LIMIT);
+
+  const results = await Promise.allSettled(
+    repos.map(async (repo) => {
+      const res = await gh<{ workflow_runs: RawRun[] }>(
+        env,
+        `/repos/${repo.full_name}/actions/runs?per_page=${RUNS_PER_REPO}&exclude_pull_requests=true`,
+      );
+      return res.workflow_runs.map((r) => toRun(repo.full_name, r));
+    }),
+  );
+
+  const failures = results.filter(
+    (r): r is PromiseRejectedResult => r.status === 'rejected',
+  );
+  // 全リポジトリで失敗したら権限不足とみなしてエラーにする（一部だけなら無視）
+  if (repos.length > 0 && failures.length === repos.length) {
+    const reason = failures[0].reason;
+    throw reason instanceof GithubError && reason.status === 403
+      ? new GithubError(
+          403,
+          'Actions の履歴を取得できません。GITHUB_TOKEN に Actions (read) 権限が必要です',
+        )
+      : reason;
+  }
+
+  return results
+    .flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
+    .slice(0, RUNS_LIMIT);
+};
+
+// workers.dev では Cache API が効かないので isolate 内のメモリにも持つ
+let runsMemo: { runs: WorkflowRun[]; at: number } | null = null;
+
+/** 十数回の API 呼び出しになるので1分キャッシュ（メモリ → エッジキャッシュ → GitHub） */
+export const listRecentRuns = async (env: Env): Promise<WorkflowRun[]> => {
+  if (runsMemo && Date.now() - runsMemo.at < RUNS_CACHE_SEC * 1000) {
+    return runsMemo.runs;
+  }
+  const cache = typeof caches !== 'undefined' ? caches.default : null;
+  const key = new Request('https://codespacedash.internal/actions-runs');
+  const hit = cache ? await cache.match(key) : undefined;
+  if (hit) {
+    const runs = await hit.json<WorkflowRun[]>();
+    runsMemo = { runs, at: Date.now() };
+    return runs;
+  }
+  const runs = await fetchRecentRuns(env);
+  runsMemo = { runs, at: Date.now() };
+  await cache?.put(
+    key,
+    new Response(JSON.stringify(runs), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': `max-age=${RUNS_CACHE_SEC}`,
+      },
+    }),
+  );
+  return runs;
 };
