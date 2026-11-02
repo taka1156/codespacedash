@@ -1,0 +1,7 @@
+# ローカル開発用（cp .dev.vars.example .dev.vars）。.dev.vars は git に含めない
+GITHUB_TOKEN=github_pat_xxxxxxxxxxxx
+
+# プッシュ通知を試す場合のみ（yarn vapid で生成）
+# VAPID_PUBLIC_KEY=
+# VAPID_PRIVATE_JWK={"kty":"EC",...}
+# VAPID_SUBJECT=mailto:you@example.com

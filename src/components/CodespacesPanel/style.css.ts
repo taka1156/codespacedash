@@ -127,3 +127,62 @@ export const csTime = style({
   fontSize: '0.73rem',
   color: 'var(--text-dim)',
 });
+
+export const csItemForgotten = style({
+  borderColor: 'rgba(249, 115, 22, 0.45)',
+  background: 'rgba(249, 115, 22, 0.06)',
+});
+
+export const csWarn = style({
+  fontSize: '0.73rem',
+  color: 'var(--orange)',
+});
+
+export const csActions = style({
+  display: 'flex',
+  gap: 8,
+  marginTop: 10,
+});
+
+export const csBtn = style({
+  padding: '4px 12px',
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid var(--border)',
+  background: 'transparent',
+  color: 'var(--text-muted)',
+  fontSize: '0.75rem',
+  textDecoration: 'none',
+  transition: 'border-color 0.15s, color 0.15s',
+  selectors: {
+    '&:hover:not(:disabled)': {
+      borderColor: 'var(--border-bright)',
+      color: 'var(--text)',
+    },
+    '&:disabled': {
+      opacity: 0.5,
+      cursor: 'default',
+    },
+  },
+});
+
+export const csBtnDanger = style({
+  color: 'var(--red)',
+  selectors: {
+    '&:hover:not(:disabled)': {
+      borderColor: 'rgba(248, 113, 113, 0.45)',
+      color: 'var(--red)',
+    },
+  },
+});
+
+export const stateIdleBadge = style({
+  background: 'rgba(255, 255, 255, 0.05)',
+  color: 'var(--text-muted)',
+});
+
+export const quotaBox = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 10,
+  marginBottom: 14,
+});

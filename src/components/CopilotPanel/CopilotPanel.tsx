@@ -68,7 +68,7 @@ export const CopilotPanel = ({ premiumRequests }: Props) => {
             <div>
               <p className={copilotLabel}>プレミアムリクエスト</p>
               <p className={copilotValSmall}>
-                Fine-grained PAT に <code>Plan (read)</code> 権限を付与すると、
+                GITHUB_TOKEN に <code>Plan (read)</code> 権限を付与すると、
                 モデル別リクエスト数・費用が表示されます
               </p>
             </div>

@@ -1,0 +1,43 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "codespacedash",
+  "main": "server/index.ts",
+  "compatibility_date": "2026-10-01",
+
+  // React のビルド成果物を配信。/api/* だけ Hono に回す
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
+  // つけっぱなしチェック（15分ごと）
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  },
+
+  // バージョンごとのプレビューURLは Access の対象外になりやすいので無効化
+  "preview_urls": false,
+
+  "observability": { "enabled": true },
+
+  // id を書かないと、初回デプロイ時に Wrangler が KV を自動作成して紐付ける
+  // （2回目以降は同じ KV を使い続ける）
+  "kv_namespaces": [{ "binding": "KV" }],
+
+  // ダッシュボードで設定した変数をデプロイで消さない
+  "keep_vars": true,
+
+  // 人によって違う値はここに書かず、ダッシュボードの「設定 → 変数とシークレット」で設定する:
+  //   ACCESS_TEAM_DOMAIN  例: yourteam.cloudflareaccess.com
+  //   ACCESS_AUD          Access アプリケーションの AUD タグ
+  //   VAPID_PUBLIC_KEY    yarn vapid で出た Public Key
+  //   VAPID_SUBJECT       https://自分のサイト または mailto:メールアドレス
+  // シークレット（種類を「シークレット」にする）:
+  //   GITHUB_TOKEN
+  //   VAPID_PRIVATE_JWK
+  "vars": {
+    "NOTIFY_AFTER_MIN": "60",
+    "REMIND_EVERY_MIN": "60",
+    "TIMEZONE": "Asia/Tokyo"
+  }
+}
