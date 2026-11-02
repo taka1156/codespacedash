@@ -112,3 +112,7 @@ export const breakdownTitle = style({
 export const breakdownGrid = style({
   width: '100%',
 });
+
+export const quotaWrap = style({
+  marginBottom: 12,
+});

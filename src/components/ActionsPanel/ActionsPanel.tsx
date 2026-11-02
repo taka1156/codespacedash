@@ -9,8 +9,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { actionsQuota } from '@/lib/actionsQuota';
 import type { BillingUsageSummary, WorkflowRun } from '@/lib/types';
 import { BasePanel } from '../shared/BasePanel/BasePanel';
+import { QuotaBar } from '../shared/QuotaBar/QuotaBar';
 import { RunHistory } from './RunHistory';
 import {
   accentCyan,
@@ -25,6 +27,7 @@ import {
   bstatLabel,
   bstatVal,
   emptyState,
+  quotaWrap,
   radialCenter,
   radialUnit,
   radialValue,
@@ -61,6 +64,7 @@ export const ActionsPanel = ({ summary, runs }: Props) => {
     [];
 
   const hasUsage = Boolean(summary) && actionItems.length > 0;
+  const quota = actionsQuota(summary);
 
   // 分単位の合計（unitType === "minutes"）
   const minuteItems = actionItems.filter((i) => i.unitType === 'minutes');
@@ -94,6 +98,16 @@ export const ActionsPanel = ({ summary, runs }: Props) => {
       }
       badgeText={hasUsage ? `${totalMinutes.toLocaleString()} 分` : undefined}
     >
+      {quota && (
+        <div className={quotaWrap}>
+          <QuotaBar
+            label="無料枠（Linux換算）"
+            used={quota.usedMinutes}
+            free={quota.freeMinutes}
+            unit="分"
+          />
+        </div>
+      )}
       {hasUsage ? (
         <>
           <div className={billingGrid}>
