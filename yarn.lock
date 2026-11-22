@@ -1513,9 +1513,9 @@ get-east-asian-width@^1.0.0, get-east-asian-width@^1.5.0:
   integrity sha512-XjH1AECxf0giL2V1aU8vKyRR2ppRUb5c0EvT7zuJTokQ74bNo52zOtghqdWIqrhUD79fo3x0WfKZdOqxF6LG1Q==
 
 hono@^4.13.16:
-  version "4.13.16"
-  resolved "https://registry.yarnpkg.com/hono/-/hono-4.13.16.tgz#bbcf7651905e06723e1bb25f7f390ee4fb7c181b"
-  integrity sha512-AOLOEhvrV+iH92xXCnFr/5+3KjPKcI3xP63XJtX5spAnkznPdHijlIsUTpi7/9EhWqrTCekw5c5zh1K+YsVw7A==
+  version "4.13.20"
+  resolved "https://registry.yarnpkg.com/hono/-/hono-4.13.20.tgz#52194d4d764c07f74648c7c8d5c739751643628f"
+  integrity sha512-xo6gecEJQ+CjTtOUUbcLHE8CdRKMeF4qITe+DT+OhFnSUmZR/ZBa9XavAfiGh4HlukmlaHFdaK4dz5tkTYFNmA==
 
 immer@^11.1.8, immer@^11.2.9:
   version "11.2.10"
