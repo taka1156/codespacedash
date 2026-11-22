@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin';
-import react from '@vitejs/plugin-react-swc';
+import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig } from 'vite';
 
