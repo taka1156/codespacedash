@@ -185,3 +185,36 @@ export const tokenColor = styleVariants({
   cacheRead: { background: '#6b8f71' },
   output: { background: '#c9a7f5' },
 });
+
+export const linkRow = style({
+  display: 'flex',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: '8px 14px',
+});
+
+export const linkButton = style({
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '8px 14px',
+  borderRadius: 'var(--radius-sm)',
+  background: 'var(--claude-dim)',
+  border: '1px solid rgba(217, 119, 87, 0.4)',
+  color: 'var(--claude)',
+  fontSize: '0.82rem',
+  fontWeight: 500,
+  textDecoration: 'none',
+  transition: 'background 0.15s',
+  selectors: {
+    '&:hover': { background: 'rgba(217, 119, 87, 0.25)' },
+    '&:focus-visible': {
+      outline: '2px solid var(--claude)',
+      outlineOffset: 2,
+    },
+  },
+});
+
+export const linkSub = style({
+  fontSize: '0.75rem',
+  color: 'var(--text-muted)',
+});

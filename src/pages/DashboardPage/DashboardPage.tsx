@@ -28,7 +28,11 @@ export const DashboardPage = () => {
     lastFetched,
     fetchAll,
     stopCodespace,
-  } = useDashboard(aiProvider);
+  } = useDashboard(
+    aiProvider,
+    ((settings.debug.enabled && settings.debug.claudePlan) ||
+      settings.claudePlan) === 'api',
+  );
 
   const data = applyDebug(rawData, settings);
   const plans = resolvePlans(settings, data);

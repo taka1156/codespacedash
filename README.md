@@ -60,7 +60,7 @@ Cloudflare ダッシュボードの Worker の **設定 → 変数とシーク�
 | 名前 | 種類 | 値 |
 |------|------|------|
 | `GITHUB_TOKEN` | シークレット | 手順1で作ったトークン |
-| `ANTHROPIC_ADMIN_KEY` | シークレット | Claude パネルを使う場合のみ。Anthropic の Admin API キー（`sk-ant-admin01-…`） |
+| `ANTHROPIC_ADMIN_KEY` | シークレット | Claude を「API 従量課金」で使う場合のみ。Anthropic の Admin API キー（`sk-ant-admin01-…`）。Pro / Max では不要 |
 | `VAPID_PRIVATE_JWK` | シークレット | 上で出た Private Key の JSON（1行のまま） |
 | `VAPID_PUBLIC_KEY` | テキスト | 上で出た Public Key |
 | `VAPID_SUBJECT` | テキスト | `https://自分のサイト` か `mailto:メールアドレス`（プッシュ配信サービス向けの連絡先。端末には表示されません） |
@@ -111,9 +111,10 @@ Yarn は `package.json` の `packageManager`（`yarn@1.22.22`）、Node.js は `
 |---|---|---|---|
 | GitHub | Free / Pro | Codespaces 120 / 180 コア時間、Actions 2,000 / 3,000 分 | `GET /user` の `plan` から自動（手動で変更も可） |
 | Copilot | Free / Pro / Pro+ | AI Credits 付与額 なし / $10 / $39 | 手動（API なし） |
-| Claude | API / Pro / Max 5x / Max 20x | 比較対象の月額 なし / $20 / $100 / $200 | 手動（API なし） |
+| Claude | Pro / Max 5x / Max 20x / API | 月額 $20 / $100 / $200 / 従量 | 手動（API なし） |
 
-> Claude のサブスク（Pro / Max）の使用量を取れる公式 API はないため、Claude パネルは Admin API で取れる **API の利用額** を表示し、サブスク契約時はプラン月額と比べたバーを出します。Admin API は組織アカウントのみ利用できます。
+> Claude のサブスク（Pro / Max）の使用量を取れる公式 API はないため、Pro / Max を選ぶと Claude パネルはプラン情報と claude.ai の使用量ページへのリンクだけを表示します（API は呼びません。`claude setup-token` のトークンは使用量の取得には使えません）。
+> 「API 従量課金」を選んだ場合は、Admin API で取れるトークン数・費用を表示します。Admin API は Console の組織アカウントでのみ使え、`ANTHROPIC_ADMIN_KEY` が必要です。
 
 上限値は `src/lib/plans.ts` にまとめてあります。
 

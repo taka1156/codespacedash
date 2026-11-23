@@ -57,7 +57,7 @@ const DEFAULTS: Settings = {
   aiProvider: 'copilot',
   githubPlan: 'auto',
   copilotPlan: 'pro',
-  claudePlan: 'api',
+  claudePlan: 'pro',
   debug: IS_STATIC_PREVIEW
     ? { ...EMPTY_DEBUG, ...SAMPLE_DEBUG, enabled: true }
     : EMPTY_DEBUG,

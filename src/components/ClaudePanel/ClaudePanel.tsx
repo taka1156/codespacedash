@@ -7,10 +7,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { CLAUDE_PLANS, type ClaudePlan } from '@/lib/plans';
+import { CLAUDE_PLANS, CLAUDE_USAGE_URL, type ClaudePlan } from '@/lib/plans';
 import type { ClaudeTokens, ClaudeUsage } from '@/lib/types';
 import { BasePanel } from '../shared/BasePanel/BasePanel';
-import { QuotaBar } from '../shared/QuotaBar/QuotaBar';
 import {
   accentClaude,
   accentGreen,
@@ -19,6 +18,9 @@ import {
   legendGrid,
   legendItem,
   legendValue,
+  linkButton,
+  linkRow,
+  linkSub,
   modelCost,
   modelList,
   modelMeta,
@@ -103,9 +105,65 @@ const Note = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
+const SubscriptionCard = ({ plan }: { plan: ClaudePlan }) => {
+  const { label, monthlyUsd, multiplier } = CLAUDE_PLANS[plan];
+  return (
+    <BasePanel
+      title="Claude"
+      icon="✳"
+      subTitle="サブスクリプション"
+      badgeText={label}
+    >
+      <div className={tiles}>
+        <div className={tile}>
+          <span className={tileLabel}>プラン</span>
+          <span className={clsx(tileValue, accentClaude)}>
+            {label.replace('Claude ', '')}
+          </span>
+        </div>
+        <div className={tile}>
+          <span className={tileLabel}>月額</span>
+          <span className={tileValue}>${monthlyUsd}</span>
+        </div>
+        <div className={tile}>
+          <span className={tileLabel}>使用枠</span>
+          <span className={tileValue}>
+            {multiplier === 1 ? '基準' : `${multiplier}倍`}
+          </span>
+          <span className={tileSub}>Pro 比</span>
+        </div>
+      </div>
+      <div className={section}>
+        <Note>
+          Pro / Max の使用量（5時間ごとの枠と週ごとの上限）は公式 API
+          がないため、ここには表示できません。claude.ai
+          の使用量ページで確認してください。
+        </Note>
+      </div>
+      <div className={linkRow}>
+        <a
+          className={linkButton}
+          href={CLAUDE_USAGE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          claude.ai で使用量を見る ↗
+        </a>
+        <span className={linkSub}>
+          Claude Code では <code>/usage</code>
+        </span>
+      </div>
+    </BasePanel>
+  );
+};
+
 export const ClaudePanel = ({ usage, configured, plan }: Props) => {
   const { label: planLabel, monthlyUsd } = CLAUDE_PLANS[plan];
   const subTitle = 'Claude API 使用状況（今月）';
+
+  if (monthlyUsd !== null) {
+    return <SubscriptionCard plan={plan} />;
+  }
 
   if (!configured) {
     return (
@@ -172,18 +230,6 @@ export const ClaudePanel = ({ usage, configured, plan }: Props) => {
 
   return (
     <BasePanel title="Claude" icon="✳" subTitle={subTitle} badgeText={badge}>
-      {cost !== null && monthlyUsd !== null && (
-        <div className={section}>
-          <QuotaBar
-            label={`API換算 / ${planLabel} 月額`}
-            used={cost}
-            free={monthlyUsd}
-            unit="USD"
-            neutral
-          />
-        </div>
-      )}
-
       <div className={tiles}>
         <div className={tile}>
           <span className={tileLabel}>コスト</span>

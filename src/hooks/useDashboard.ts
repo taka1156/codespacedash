@@ -15,15 +15,16 @@ const setAppBadge = (count: number) => {
   p?.catch(() => {});
 };
 
-export const useDashboard = (aiProvider: AiProvider) => {
+export const useDashboard = (aiProvider: AiProvider, claudeApi: boolean) => {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
   const inFlight = useRef(false);
   const pending = useRef(false);
-  const providerRef = useRef(aiProvider);
-  providerRef.current = aiProvider;
+  const query = `ai=${aiProvider}${aiProvider === 'claude' && !claudeApi ? '&claudeApi=0' : ''}`;
+  const queryRef = useRef(query);
+  queryRef.current = query;
 
   const fetchAll = useCallback(async () => {
     if (IS_STATIC_PREVIEW) {
@@ -39,8 +40,9 @@ export const useDashboard = (aiProvider: AiProvider) => {
     try {
       do {
         pending.current = false;
-        const ai = providerRef.current;
-        setData(await api.get<DashboardResponse>(`/dashboard?ai=${ai}`));
+        setData(
+          await api.get<DashboardResponse>(`/dashboard?${queryRef.current}`),
+        );
       } while (pending.current);
     } catch (e) {
       if (e instanceof SessionExpiredError) {
@@ -66,10 +68,10 @@ export const useDashboard = (aiProvider: AiProvider) => {
     [fetchAll],
   );
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: aiProvider の変更で取り直す
+  // biome-ignore lint/correctness/useExhaustiveDependencies: query の変更で取り直す
   useEffect(() => {
     fetchAll();
-  }, [fetchAll, aiProvider]);
+  }, [fetchAll, query]);
 
   useEffect(() => {
     const timer = setInterval(() => {

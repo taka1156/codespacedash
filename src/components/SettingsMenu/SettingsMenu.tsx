@@ -321,13 +321,13 @@ const DebugTab = ({
         />
         <NumberRow
           label="Claude コスト"
-          hint="USD"
+          hint="USD（APIプランのみ）"
           value={debug.claudeUsd}
           onChange={(v) => onChangeDebug({ claudeUsd: v })}
         />
         <NumberRow
           label="Claude トークン"
-          hint="百万トークン"
+          hint="百万（APIプランのみ）"
           value={debug.claudeTokensM}
           onChange={(v) => onChangeDebug({ claudeTokensM: v })}
         />

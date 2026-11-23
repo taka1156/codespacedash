@@ -35,5 +35,3 @@ export const quotaFill = style({
 export const quotaOk = style({ background: 'var(--green)' });
 
 export const quotaLow = style({ background: 'var(--red)' });
-
-export const quotaNeutral = style({ background: 'var(--claude)' });

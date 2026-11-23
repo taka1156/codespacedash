@@ -63,6 +63,7 @@ api.get('/dashboard', async (c) => {
     ? (ai as AiProvider)
     : 'copilot';
   const hasClaude = claudeConfigured(c.env);
+  const claudeApi = c.req.query('claudeApi') !== '0';
 
   // 1つ失敗しても他のパネルは表示できるよう個別に扱う
   const [codespaces, runs, billing, copilot, claude] = await Promise.allSettled(
@@ -73,7 +74,7 @@ api.get('/dashboard', async (c) => {
       aiProvider === 'copilot'
         ? getPremiumRequests(c.env, user.login, period)
         : Promise.resolve(null),
-      aiProvider === 'claude' && hasClaude
+      aiProvider === 'claude' && hasClaude && claudeApi
         ? getClaudeUsage(c.env, period)
         : Promise.resolve(null),
     ],

@@ -19,14 +19,16 @@ export const COPILOT_PLANS = {
 export type CopilotPlan = keyof typeof COPILOT_PLANS;
 
 export const CLAUDE_PLANS = {
-  api: { label: 'API 従量課金', monthlyUsd: null },
-  pro: { label: 'Claude Pro', monthlyUsd: 20 },
-  max5x: { label: 'Claude Max 5x', monthlyUsd: 100 },
-  max20x: { label: 'Claude Max 20x', monthlyUsd: 200 },
+  pro: { label: 'Claude Pro', monthlyUsd: 20, multiplier: 1 },
+  max5x: { label: 'Claude Max 5x', monthlyUsd: 100, multiplier: 5 },
+  max20x: { label: 'Claude Max 20x', monthlyUsd: 200, multiplier: 20 },
+  api: { label: 'API 従量課金', monthlyUsd: null, multiplier: null },
 } as const satisfies Record<
   string,
-  { label: string; monthlyUsd: number | null }
+  { label: string; monthlyUsd: number | null; multiplier: number | null }
 >;
+
+export const CLAUDE_USAGE_URL = 'https://claude.ai/settings/usage';
 export type ClaudePlan = keyof typeof CLAUDE_PLANS;
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
