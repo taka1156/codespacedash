@@ -6,6 +6,7 @@ export interface GithubUser {
   name: string | null;
   avatar_url: string;
   html_url: string;
+  plan: string | null;
 }
 
 export type CodespaceState =
@@ -71,6 +72,35 @@ export interface PremiumRequestUsage {
   usageItems: PremiumRequestItem[];
 }
 
+export type AiProvider = 'copilot' | 'claude';
+
+export const AI_PROVIDERS: readonly AiProvider[] = ['copilot', 'claude'];
+
+export interface ClaudeTokens {
+  input: number;
+  cacheWrite: number;
+  cacheRead: number;
+  output: number;
+}
+
+export interface ClaudeModelUsage extends ClaudeTokens {
+  model: string;
+  webSearchRequests: number;
+  costUsd: number | null;
+}
+
+export interface ClaudeDailyUsage extends ClaudeTokens {
+  date: string;
+  costUsd: number | null;
+}
+
+export interface ClaudeUsage {
+  timePeriod: { year: number; month: number };
+  models: ClaudeModelUsage[];
+  daily: ClaudeDailyUsage[];
+  totalCostUsd: number | null;
+}
+
 // Actions の実行履歴（最近 push された上位リポジトリから集約）
 export interface WorkflowRun {
   id: number;
@@ -111,10 +141,13 @@ export interface DashboardResponse {
   codespaces: Codespace[] | null;
   workflowRuns: WorkflowRun[] | null;
   billingSummary: BillingUsageSummary | null;
+  aiProvider: AiProvider;
   premiumRequests: PremiumRequestUsage | null;
+  claudeUsage: ClaudeUsage | null;
+  claudeConfigured: boolean;
   // 取得に失敗したセクションだけメッセージが入る（他のセクションは表示を続ける）
   errors: Partial<
-    Record<'codespaces' | 'runs' | 'billing' | 'copilot', string>
+    Record<'codespaces' | 'runs' | 'billing' | 'copilot' | 'claude', string>
   >;
   notifyAfterMin: number;
   fetchedAt: string;

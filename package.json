@@ -13,6 +13,8 @@
     "dev": "vite --port 5173",
     "analyze": "vite build --mode analyze",
     "build": "vite build",
+    "build:pages": "vite build --mode pages",
+    "dev:pages": "vite --mode pages --port 5174",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json",
     "deploy": "vite build && wrangler deploy",

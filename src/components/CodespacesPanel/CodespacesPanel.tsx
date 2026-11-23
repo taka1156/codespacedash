@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { useState } from 'react';
 import { codespacesQuota } from '@/lib/codespacesQuota';
+import { GITHUB_PLANS, type GithubPlan } from '@/lib/plans';
 import type { BillingUsageSummary, Codespace } from '@/lib/types';
 import { BasePanel } from '../shared/BasePanel/BasePanel';
 import { QuotaBar } from '../shared/QuotaBar/QuotaBar';
@@ -128,17 +129,24 @@ interface Props {
   notifyAfterMin: number;
   onStop: (name: string) => Promise<void>;
   billingSummary: BillingUsageSummary | null;
+  plan: GithubPlan;
 }
 
-const Quota = ({ summary }: { summary: BillingUsageSummary | null }) => {
-  const q = codespacesQuota(summary);
+const Quota = ({
+  summary,
+  plan,
+}: {
+  summary: BillingUsageSummary | null;
+  plan: GithubPlan;
+}) => {
+  const q = codespacesQuota(summary, plan);
   if (!q) {
     return null;
   }
   return (
     <div className={quotaBox}>
       <QuotaBar
-        label="無料枠（2コア換算）"
+        label={`${GITHUB_PLANS[plan].label} の無料枠（2コア換算）`}
         used={q.usedHours}
         free={q.freeHours}
         unit="時間"
@@ -152,6 +160,7 @@ export const CodespacesPanel = ({
   notifyAfterMin,
   onStop,
   billingSummary,
+  plan,
 }: Props) => {
   const [stopping, setStopping] = useState<string | null>(null);
   const [stopError, setStopError] = useState<string | null>(null);
@@ -178,7 +187,7 @@ export const CodespacesPanel = ({
   if (total === 0) {
     return (
       <BasePanel title="Codespaces" icon="⬡" subTitle={subTitle} badgeText="0">
-        <Quota summary={billingSummary} />
+        <Quota summary={billingSummary} plan={plan} />
         <div className={emptyState}>
           コードスペースはありません 🎉
           <br />
@@ -205,7 +214,7 @@ export const CodespacesPanel = ({
       subTitle={subTitle}
       badgeText={`${total}`}
     >
-      <Quota summary={billingSummary} />
+      <Quota summary={billingSummary} plan={plan} />
       {stopError && <p className={csWarn}>⚠️ {stopError}</p>}
       <div className={csList}>
         {sorted.map((cs) => {

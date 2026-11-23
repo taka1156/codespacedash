@@ -1,6 +1,6 @@
 <img src="public/logo.svg" alt="codespacedash" width="100%" height="100%">
 
-GitHub Codespaces・Actions・Copilot の利用状況を可視化するダッシュボード。
+GitHub Codespaces・Actions・Copilot（または Claude）の利用状況を可視化するダッシュボード。
 Codespaces の消し忘れを PWA のプッシュ通知で知らせます。
 
 ## 構成
@@ -60,6 +60,7 @@ Cloudflare ダッシュボードの Worker の **設定 → 変数とシーク�
 | 名前 | 種類 | 値 |
 |------|------|------|
 | `GITHUB_TOKEN` | シークレット | 手順1で作ったトークン |
+| `ANTHROPIC_ADMIN_KEY` | シークレット | Claude パネルを使う場合のみ。Anthropic の Admin API キー（`sk-ant-admin01-…`） |
 | `VAPID_PRIVATE_JWK` | シークレット | 上で出た Private Key の JSON（1行のまま） |
 | `VAPID_PUBLIC_KEY` | テキスト | 上で出た Public Key |
 | `VAPID_SUBJECT` | テキスト | `https://自分のサイト` か `mailto:メールアドレス`（プッシュ配信サービス向けの連絡先。端末には表示されません） |
@@ -96,6 +97,29 @@ Yarn は `package.json` の `packageManager`（`yarn@1.22.22`）、Node.js は `
 
 - **Android / PC**: ダッシュボード右上の「🔕 通知を有効化」を押して許可 →「テスト通知」で確認
 - **iPhone / iPad**（iOS 16.4 以降）: Safari の「共有 → ホーム画面に追加」で追加したアプリを開いてから「通知を有効化」。Safari のタブのままでは通知できません
+
+## 画面の設定（⚙ ボタン）
+
+設定は端末ごと（ブラウザの localStorage）に保存されます。
+
+**設定タブ**
+
+- **AIパネル**: Copilot と Claude のどちらを表示するか。選ばれていない方の API は呼びません
+- **契約プラン**: 無料枠・上限の計算に使います
+
+| サービス | プラン | 上限 | 判定 |
+|---|---|---|---|
+| GitHub | Free / Pro | Codespaces 120 / 180 コア時間、Actions 2,000 / 3,000 分 | `GET /user` の `plan` から自動（手動で変更も可） |
+| Copilot | Free / Pro / Pro+ | AI Credits 付与額 なし / $10 / $39 | 手動（API なし） |
+| Claude | API / Pro / Max 5x / Max 20x | 比較対象の月額 なし / $20 / $100 / $200 | 手動（API なし） |
+
+> Claude のサブスク（Pro / Max）の使用量を取れる公式 API はないため、Claude パネルは Admin API で取れる **API の利用額** を表示し、サブスク契約時はプラン月額と比べたバーを出します。Admin API は組織アカウントのみ利用できます。
+
+上限値は `src/lib/plans.ts` にまとめてあります。
+
+**デバッグタブ**
+
+デバッグモードをオンにすると、ロゴの横に `DEBUG` が表示され、使用量（Codespaces・Actions・Copilot・Claude）とプランを疑似値で上書きできます。差し替えはブラウザ内だけで行い、サーバーには影響しません。API が使えない環境でも疑似データで表示できます。
 
 ## 通知の設定
 

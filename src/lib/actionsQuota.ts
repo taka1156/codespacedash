@@ -1,8 +1,6 @@
+import { GITHUB_PLANS, type GithubPlan } from './plans';
 import type { BillingUsageSummary } from './types';
 
-// GitHub Free の個人アカウントの Actions 無料枠は「毎月 12 ドル分」（分数ではなく金額）。
-// 分かりやすさのため、Linux 2コアの単価で分に直して表示する（12ドル ≒ 2,000分）
-const FREE_USD = 12;
 const LINUX_USD_PER_MIN = 0.006;
 
 export interface ActionsQuota {
@@ -13,6 +11,7 @@ export interface ActionsQuota {
 
 export const actionsQuota = (
   summary: BillingUsageSummary | null,
+  plan: GithubPlan = 'free',
 ): ActionsQuota | null => {
   if (!summary) {
     return null;
@@ -26,6 +25,6 @@ export const actionsQuota = (
 
   return {
     usedMinutes: usedUsd / LINUX_USD_PER_MIN,
-    freeMinutes: FREE_USD / LINUX_USD_PER_MIN,
+    freeMinutes: GITHUB_PLANS[plan].actionsMinutes,
   };
 };

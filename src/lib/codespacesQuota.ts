@@ -1,7 +1,6 @@
+import { GITHUB_PLANS, type GithubPlan } from './plans';
 import type { BillingUsageSummary } from './types';
 
-// GitHub Free の個人アカウントの無料枠（毎月）。2コアのマシンを前提に表示する
-export const FREE_CORE_HOURS = 120; // = 2コアで60時間
 const BASE_CORES = 2;
 
 export interface QuotaUsage {
@@ -21,6 +20,7 @@ const coresOf = (sku: string) => {
 
 export const codespacesQuota = (
   summary: BillingUsageSummary | null,
+  plan: GithubPlan = 'free',
 ): QuotaUsage | null => {
   const items =
     summary?.usageItems.filter((i) => /codespaces/i.test(i.product)) ?? [];
@@ -38,6 +38,6 @@ export const codespacesQuota = (
 
   return {
     usedHours: coreHours / BASE_CORES,
-    freeHours: FREE_CORE_HOURS / BASE_CORES,
+    freeHours: GITHUB_PLANS[plan].codespacesCoreHours / BASE_CORES,
   };
 };

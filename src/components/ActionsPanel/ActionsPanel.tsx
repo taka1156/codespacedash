@@ -10,6 +10,7 @@ import {
   YAxis,
 } from 'recharts';
 import { actionsQuota } from '@/lib/actionsQuota';
+import { GITHUB_PLANS, type GithubPlan } from '@/lib/plans';
 import type { BillingUsageSummary, WorkflowRun } from '@/lib/types';
 import { BasePanel } from '../shared/BasePanel/BasePanel';
 import { QuotaBar } from '../shared/QuotaBar/QuotaBar';
@@ -37,6 +38,7 @@ import {
 interface Props {
   summary: BillingUsageSummary | null;
   runs: WorkflowRun[] | null;
+  plan: GithubPlan;
 }
 
 const SKU_LABEL: Record<string, string> = {
@@ -57,14 +59,14 @@ const SKU_COLOR: Record<string, string> = {
   'Actions Windows': '#38bdf8',
 };
 
-export const ActionsPanel = ({ summary, runs }: Props) => {
+export const ActionsPanel = ({ summary, runs, plan }: Props) => {
   // usageItems から Actions だけ抽出
   const actionItems =
     summary?.usageItems.filter((i) => i.product.toLowerCase() === 'actions') ??
     [];
 
   const hasUsage = Boolean(summary) && actionItems.length > 0;
-  const quota = actionsQuota(summary);
+  const quota = actionsQuota(summary, plan);
 
   // 分単位の合計（unitType === "minutes"）
   const minuteItems = actionItems.filter((i) => i.unitType === 'minutes');
@@ -83,7 +85,7 @@ export const ActionsPanel = ({ summary, runs }: Props) => {
   const gaugeVal =
     totalNet > 0
       ? Math.min((totalNet / 5) * 100, 100)
-      : Math.min((totalMinutes / 2000) * 100, 100);
+      : Math.min((totalMinutes / GITHUB_PLANS[plan].actionsMinutes) * 100, 100);
   const gaugeFill =
     gaugeVal > 80 ? '#ef4444' : gaugeVal > 50 ? '#f97316' : '#22d3ee';
 
@@ -101,7 +103,7 @@ export const ActionsPanel = ({ summary, runs }: Props) => {
       {quota && (
         <div className={quotaWrap}>
           <QuotaBar
-            label="無料枠（Linux換算）"
+            label={`${GITHUB_PLANS[plan].label} の無料枠（Linux換算）`}
             used={quota.usedMinutes}
             free={quota.freeMinutes}
             unit="分"

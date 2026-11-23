@@ -3,6 +3,7 @@ import {
   quotaFill,
   quotaHead,
   quotaLow,
+  quotaNeutral,
   quotaOk,
   quotaRow,
   quotaTrack,
@@ -18,15 +19,17 @@ export const QuotaBar = ({
   used,
   free,
   unit,
+  neutral = false,
 }: {
   label: string;
   used: number;
   free: number;
   unit: string;
+  neutral?: boolean;
 }) => {
   // 使った量を表示する（0%から増える）。8割を超えたら赤
   const pct = Math.round((used / free) * 100);
-  const level = pct > 80 ? quotaLow : quotaOk;
+  const level = neutral ? quotaNeutral : pct > 80 ? quotaLow : quotaOk;
   return (
     <div className={quotaRow}>
       <div className={quotaHead}>

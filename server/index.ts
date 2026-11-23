@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { secureHeaders } from 'hono/secure-headers';
 import {
+  AI_PROVIDERS,
+  type AiProvider,
   type ApiErrorBody,
   CSRF_HEADER,
   CSRF_VALUE,
@@ -9,6 +11,11 @@ import {
 } from '../shared/types';
 import { type AppEnv, type Env, numVar } from './env';
 import { cloudflareAccess } from './lib/access';
+import {
+  AnthropicError,
+  claudeConfigured,
+  getClaudeUsage,
+} from './lib/anthropic';
 import {
   currentPeriod,
   GithubError,
@@ -51,39 +58,54 @@ const message = (r: PromiseSettledResult<unknown>) =>
 api.get('/dashboard', async (c) => {
   const user = await getUser(c.env);
   const period = currentPeriod(c.env.TIMEZONE);
+  const ai = c.req.query('ai');
+  const aiProvider: AiProvider = AI_PROVIDERS.includes(ai as AiProvider)
+    ? (ai as AiProvider)
+    : 'copilot';
+  const hasClaude = claudeConfigured(c.env);
 
   // 1つ失敗しても他のパネルは表示できるよう個別に扱う
-  const [codespaces, runs, billing, copilot] = await Promise.allSettled([
-    listCodespaces(c.env),
-    listRecentRuns(c.env),
-    getBillingSummary(c.env, user.login, period),
-    getPremiumRequests(c.env, user.login, period),
-  ]);
+  const [codespaces, runs, billing, copilot, claude] = await Promise.allSettled(
+    [
+      listCodespaces(c.env),
+      listRecentRuns(c.env),
+      getBillingSummary(c.env, user.login, period),
+      aiProvider === 'copilot'
+        ? getPremiumRequests(c.env, user.login, period)
+        : Promise.resolve(null),
+      aiProvider === 'claude' && hasClaude
+        ? getClaudeUsage(c.env, period)
+        : Promise.resolve(null),
+    ],
+  );
 
   const errors: DashboardResponse['errors'] = {};
-  const cErr = message(codespaces);
-  const rErr = message(runs);
-  const bErr = message(billing);
-  const pErr = message(copilot);
-  if (cErr) {
-    errors.codespaces = cErr;
+  const entries = [
+    ['codespaces', codespaces],
+    ['runs', runs],
+    ['billing', billing],
+    ['copilot', copilot],
+    ['claude', claude],
+  ] as const;
+  for (const [key, r] of entries) {
+    const m = message(r);
+    if (m) {
+      errors[key] = m;
+    }
   }
-  if (rErr) {
-    errors.runs = rErr;
-  }
-  if (bErr) {
-    errors.billing = bErr;
-  }
-  if (pErr) {
-    errors.copilot = pErr;
-  }
+
+  const value = <T>(r: PromiseSettledResult<T>) =>
+    r.status === 'fulfilled' ? r.value : null;
 
   return c.json<DashboardResponse>({
     user,
-    codespaces: codespaces.status === 'fulfilled' ? codespaces.value : null,
-    workflowRuns: runs.status === 'fulfilled' ? runs.value : null,
-    billingSummary: billing.status === 'fulfilled' ? billing.value : null,
-    premiumRequests: copilot.status === 'fulfilled' ? copilot.value : null,
+    codespaces: value(codespaces),
+    workflowRuns: value(runs),
+    billingSummary: value(billing),
+    aiProvider,
+    premiumRequests: value(copilot),
+    claudeUsage: value(claude),
+    claudeConfigured: hasClaude,
     errors,
     notifyAfterMin: numVar(c.env.NOTIFY_AFTER_MIN, 60),
     fetchedAt: new Date().toISOString(),
@@ -143,6 +165,9 @@ api.onError((err, c) => {
     // GitHub の 401/403 はトークン設定の問題なので 502 で返し、Access のセッション切れと区別する
     const status = err.status === 400 ? 400 : 502;
     return c.json<ApiErrorBody>({ error: err.message }, status);
+  }
+  if (err instanceof AnthropicError) {
+    return c.json<ApiErrorBody>({ error: err.message }, 502);
   }
   console.error(err);
   return c.json<ApiErrorBody>({ error: 'Internal Server Error' }, 500);

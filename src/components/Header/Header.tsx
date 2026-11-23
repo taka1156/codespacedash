@@ -1,12 +1,17 @@
 import clsx from 'clsx';
 import { type PushStatus, usePush } from '@/hooks/usePush';
+import type { DebugSettings, Settings } from '@/hooks/useSettings';
+import type { ResolvedPlans } from '@/lib/debug';
+import { asset, IS_STATIC_PREVIEW } from '@/lib/preview';
 import type { GithubUser } from '@/lib/types';
+import { SettingsMenu } from '../SettingsMenu/SettingsMenu';
 import {
   avatar,
   btnGhost,
   btnNotifyOn,
   btnRefresh,
   btnRefreshSpinning,
+  debugBadge,
   header,
   headerLeft,
   headerLogo,
@@ -24,6 +29,11 @@ interface Props {
   onRefresh: () => void;
   loading: boolean;
   lastFetched: Date | null;
+  settings: Settings;
+  plans: ResolvedPlans;
+  onChangeSettings: (patch: Partial<Settings>) => void;
+  onChangeDebug: (patch: Partial<DebugSettings>) => void;
+  claudeConfigured?: boolean;
 }
 
 const PUSH_HINT: Partial<Record<PushStatus, string>> = {
@@ -96,12 +106,27 @@ const PushButton = () => {
   );
 };
 
-export const Header = ({ user, onRefresh, loading, lastFetched }: Props) => (
+export const Header = ({
+  user,
+  onRefresh,
+  loading,
+  lastFetched,
+  settings,
+  plans,
+  onChangeSettings,
+  onChangeDebug,
+  claudeConfigured,
+}: Props) => (
   <header className={header}>
     <div className={headerLeft}>
       <div className={headerLogo}>
-        <img src="/logo.svg" alt="CodespaceDash" />
+        <img src={asset('logo.svg')} alt="CodespaceDash" />
       </div>
+      {settings.debug.enabled && (
+        <span className={debugBadge} title="デバッグモード：疑似値を表示中">
+          DEBUG
+        </span>
+      )}
     </div>
     <div className={headerRight}>
       {lastFetched && (
@@ -121,7 +146,14 @@ export const Header = ({ user, onRefresh, loading, lastFetched }: Props) => (
           ↻
         </span>
       </button>
-      <PushButton />
+      {!IS_STATIC_PREVIEW && <PushButton />}
+      <SettingsMenu
+        settings={settings}
+        plans={plans}
+        onChange={onChangeSettings}
+        onChangeDebug={onChangeDebug}
+        claudeConfigured={claudeConfigured}
+      />
       {user && (
         <a
           className={userInfo}
@@ -134,9 +166,14 @@ export const Header = ({ user, onRefresh, loading, lastFetched }: Props) => (
         </a>
       )}
       {/* Cloudflare Access のログアウト */}
-      <a className={clsx(btnGhost, hideOnMobile)} href="/cdn-cgi/access/logout">
-        ログアウト
-      </a>
+      {!IS_STATIC_PREVIEW && (
+        <a
+          className={clsx(btnGhost, hideOnMobile)}
+          href="/cdn-cgi/access/logout"
+        >
+          ログアウト
+        </a>
+      )}
     </div>
   </header>
 );

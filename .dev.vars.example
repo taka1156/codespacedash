@@ -1,6 +1,9 @@
 # ローカル開発用（cp .dev.vars.example .dev.vars）。.dev.vars は git に含めない
 GITHUB_TOKEN=github_pat_xxxxxxxxxxxx
 
+# Claude パネルを使う場合のみ（Anthropic の Admin API キー）
+# ANTHROPIC_ADMIN_KEY=sk-ant-admin01-xxxxxxxxxxxx
+
 # プッシュ通知を試す場合のみ（yarn vapid で生成）
 # VAPID_PUBLIC_KEY=
 # VAPID_PRIVATE_JWK={"kty":"EC",...}

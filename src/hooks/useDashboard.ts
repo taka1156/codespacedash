@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, SessionExpiredError } from '@/lib/api';
-import type { DashboardResponse } from '@/lib/types';
+import { IS_STATIC_PREVIEW } from '@/lib/preview';
+import type { AiProvider, DashboardResponse } from '@/lib/types';
 
 const REFRESH_MS = 60_000;
 
@@ -14,22 +15,33 @@ const setAppBadge = (count: number) => {
   p?.catch(() => {});
 };
 
-export const useDashboard = () => {
+export const useDashboard = (aiProvider: AiProvider) => {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
   const inFlight = useRef(false);
+  const pending = useRef(false);
+  const providerRef = useRef(aiProvider);
+  providerRef.current = aiProvider;
 
   const fetchAll = useCallback(async () => {
+    if (IS_STATIC_PREVIEW) {
+      return;
+    }
     if (inFlight.current) {
+      pending.current = true;
       return;
     }
     inFlight.current = true;
     setLoading(true);
     setError(null);
     try {
-      setData(await api.get<DashboardResponse>('/dashboard'));
+      do {
+        pending.current = false;
+        const ai = providerRef.current;
+        setData(await api.get<DashboardResponse>(`/dashboard?ai=${ai}`));
+      } while (pending.current);
     } catch (e) {
       if (e instanceof SessionExpiredError) {
         setSessionExpired(true);
@@ -37,12 +49,16 @@ export const useDashboard = () => {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       inFlight.current = false;
+      pending.current = false;
       setLoading(false);
     }
   }, []);
 
   const stopCodespace = useCallback(
     async (name: string) => {
+      if (IS_STATIC_PREVIEW) {
+        throw new Error('静的プレビューでは停止できません');
+      }
       await api.post(`/codespaces/${encodeURIComponent(name)}/stop`);
       // 停止処理は数秒かかるので少し待ってから再取得
       setTimeout(fetchAll, 3000);
@@ -50,8 +66,12 @@ export const useDashboard = () => {
     [fetchAll],
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: aiProvider の変更で取り直す
   useEffect(() => {
     fetchAll();
+  }, [fetchAll, aiProvider]);
+
+  useEffect(() => {
     const timer = setInterval(() => {
       if (!document.hidden) {
         fetchAll();

@@ -177,3 +177,15 @@ export const pushError = style({
   color: 'var(--red)',
   fontSize: '0.78rem',
 });
+
+export const debugBadge = style({
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.68rem',
+  fontWeight: 600,
+  letterSpacing: '0.1em',
+  padding: '2px 7px',
+  borderRadius: 4,
+  color: '#0d1117',
+  background: 'var(--yellow)',
+  flexShrink: 0,
+});

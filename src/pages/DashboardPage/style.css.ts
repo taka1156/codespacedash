@@ -63,3 +63,14 @@ export const skeletonPanel = style({
   borderRadius: 'var(--radius)',
   animation: `${shimmer} 1.4s ease infinite`,
 });
+
+export const previewBanner = style({
+  background: 'rgba(251, 191, 36, 0.06)',
+  border: '1px solid rgba(251, 191, 36, 0.3)',
+  borderRadius: 'var(--radius-sm)',
+  padding: '12px 16px',
+  fontSize: '0.82rem',
+  lineHeight: 1.6,
+  color: 'var(--text-muted)',
+  marginBottom: 20,
+});

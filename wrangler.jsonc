@@ -34,6 +34,7 @@
   //   VAPID_SUBJECT       https://自分のサイト または mailto:メールアドレス
   // シークレット（種類を「シークレット」にする）:
   //   GITHUB_TOKEN
+  //   ANTHROPIC_ADMIN_KEY  （Claude パネルを使う場合のみ）
   //   VAPID_PRIVATE_JWK
   "vars": {
     "NOTIFY_AFTER_MIN": "60",

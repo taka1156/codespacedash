@@ -8,8 +8,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { COPILOT_PLANS, type CopilotPlan } from '@/lib/plans';
 import type { PremiumRequestUsage } from '@/lib/types';
 import { BasePanel } from '../shared/BasePanel/BasePanel';
+import { QuotaBar } from '../shared/QuotaBar/QuotaBar';
 import {
   accentCyan,
   accentGreen,
@@ -36,6 +38,7 @@ import {
 
 interface Props {
   premiumRequests: PremiumRequestUsage | null;
+  plan: CopilotPlan;
 }
 
 const MODEL_COLORS = [
@@ -47,7 +50,7 @@ const MODEL_COLORS = [
   '#f87171',
 ];
 
-export const CopilotPanel = ({ premiumRequests }: Props) => {
+export const CopilotPanel = ({ premiumRequests, plan }: Props) => {
   // モデル別集計
   const modelData = (premiumRequests?.usageItems ?? []).map((item, i) => ({
     name: item.model,
@@ -58,10 +61,32 @@ export const CopilotPanel = ({ premiumRequests }: Props) => {
 
   const totalRequests = modelData.reduce((s, d) => s + d.requests, 0);
   const totalCost = modelData.reduce((s, d) => s + d.cost, 0);
+  const usedUsd = (premiumRequests?.usageItems ?? []).reduce(
+    (s, i) => s + i.grossAmount,
+    0,
+  );
+  const { label: planLabel, includedUsd } = COPILOT_PLANS[plan];
+  const quota =
+    includedUsd !== null && premiumRequests ? (
+      <div style={{ marginBottom: 16 }}>
+        <QuotaBar
+          label={`${planLabel} の AI Credits`}
+          used={usedUsd}
+          free={includedUsd}
+          unit="USD"
+        />
+      </div>
+    ) : null;
 
   if (!premiumRequests || modelData.length === 0) {
     return (
-      <BasePanel title="Copilot" icon="✦" subTitle="AIコーディングアシスタント">
+      <BasePanel
+        title="Copilot"
+        icon="✦"
+        subTitle="AIコーディングアシスタント"
+        badgeText={planLabel}
+      >
+        {quota}
         <div className={copilotGrid}>
           <div className={`${copilotCard} ${copilotPremiumNote}`}>
             <span className={copilotIcon}>💡</span>
@@ -79,7 +104,13 @@ export const CopilotPanel = ({ premiumRequests }: Props) => {
   }
 
   return (
-    <BasePanel title="Copilot" icon="✦" subTitle="AIコーディングアシスタント">
+    <BasePanel
+      title="Copilot"
+      icon="✦"
+      subTitle="AIコーディングアシスタント"
+      badgeText={planLabel}
+    >
+      {quota}
       <div className={billingGrid} style={{ marginBottom: 16 }}>
         <div className={billingStats}>
           <div className={bstat}>

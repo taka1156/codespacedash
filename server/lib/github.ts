@@ -58,12 +58,16 @@ export const getUser = async (env: Env): Promise<GithubUser> => {
   if (cachedUser && Date.now() - cachedUser.at < 10 * 60_000) {
     return cachedUser.user;
   }
-  const u = await gh<GithubUser>(env, '/user');
+  const u = await gh<Omit<GithubUser, 'plan'> & { plan?: { name?: string } }>(
+    env,
+    '/user',
+  );
   const user: GithubUser = {
     login: u.login,
     name: u.name,
     avatar_url: u.avatar_url,
     html_url: u.html_url,
+    plan: u.plan?.name ?? null,
   };
   cachedUser = { user, at: Date.now() };
   return user;
