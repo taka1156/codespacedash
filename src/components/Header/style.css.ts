@@ -1,4 +1,4 @@
-import { keyframes, style } from '@vanilla-extract/css';
+import { globalStyle, keyframes, style } from '@vanilla-extract/css';
 
 export const header = style({
   display: 'flex',
@@ -26,6 +26,14 @@ export const headerLeft = style({
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
+  minWidth: 0,
+  '@media': {
+    '(max-width: 600px)': {
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      gap: 0,
+    },
+  },
 });
 
 export const headerLogo = style({
@@ -43,6 +51,12 @@ export const headerLogo = style({
   justifyContent: 'center',
 });
 
+globalStyle(`${headerLogo} img`, {
+  display: 'block',
+  maxWidth: '100%',
+  height: 'auto',
+});
+
 export const headerTitle = style({
   fontFamily: 'var(--font-mono)',
   fontSize: '0.9rem',
@@ -51,6 +65,7 @@ export const headerTitle = style({
 });
 
 export const headerRight = style({
+  flexShrink: 0,
   display: 'flex',
   alignItems: 'center',
   gap: 10,
@@ -188,4 +203,13 @@ export const debugBadge = style({
   color: '#0d1117',
   background: 'var(--yellow)',
   flexShrink: 0,
+  '@media': {
+    '(max-width: 600px)': {
+      fontSize: '0.55rem',
+      padding: '0 5px',
+      lineHeight: 1.6,
+      marginLeft: 34,
+      marginTop: -10,
+    },
+  },
 });

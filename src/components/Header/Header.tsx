@@ -101,7 +101,8 @@ const PushButton = () => {
       title={PUSH_HINT[status]}
       onClick={() => alert(PUSH_HINT[status])}
     >
-      {status === 'needs-install' ? '📲 通知' : '🔕 通知'}
+      {status === 'needs-install' ? '📲' : '🔕'}
+      <span className={hideOnMobile}> 通知</span>
     </button>
   );
 };
