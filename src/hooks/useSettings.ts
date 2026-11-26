@@ -6,6 +6,8 @@ import {
   type CopilotPlan,
   GITHUB_PLAN_KEYS,
   type GithubPlan,
+  WORKERS_PLAN_KEYS,
+  type WorkersPlan,
 } from '@/lib/plans';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
 import type { AiProvider } from '@/lib/types';
@@ -13,14 +15,20 @@ import { AI_PROVIDERS } from '../../shared/types';
 
 const KEY = 'codespacedash:settings';
 
+/** Actions / Workers パネルのどちらを表示するか */
+export type BuildsTab = 'actions' | 'workers';
+const BUILDS_TABS: readonly BuildsTab[] = ['actions', 'workers'];
+
 export interface DebugSettings {
   enabled: boolean;
   githubPlan: GithubPlan | '';
   copilotPlan: CopilotPlan | '';
   claudePlan: ClaudePlan | '';
+  workersPlan: WorkersPlan | '';
   codespacesHours: string;
   codespacesStorageGb: string;
   actionsMinutes: string;
+  workersMinutes: string;
   copilotUsd: string;
   claudeUsd: string;
   claudeTokensM: string;
@@ -31,6 +39,8 @@ export interface Settings {
   githubPlan: GithubPlan | 'auto';
   copilotPlan: CopilotPlan;
   claudePlan: ClaudePlan;
+  workersPlan: WorkersPlan | 'auto';
+  buildsTab: BuildsTab;
   debug: DebugSettings;
 }
 
@@ -39,9 +49,11 @@ export const EMPTY_DEBUG: DebugSettings = {
   githubPlan: '',
   copilotPlan: '',
   claudePlan: '',
+  workersPlan: '',
   codespacesHours: '',
   codespacesStorageGb: '',
   actionsMinutes: '',
+  workersMinutes: '',
   copilotUsd: '',
   claudeUsd: '',
   claudeTokensM: '',
@@ -51,6 +63,7 @@ export const SAMPLE_DEBUG: Partial<DebugSettings> = {
   codespacesHours: '48',
   codespacesStorageGb: '11.5',
   actionsMinutes: '1650',
+  workersMinutes: '1280',
   copilotUsd: '7.4',
   claudeUsd: '63.2',
   claudeTokensM: '182',
@@ -61,6 +74,8 @@ const DEFAULTS: Settings = {
   githubPlan: 'auto',
   copilotPlan: 'pro',
   claudePlan: 'pro',
+  workersPlan: 'auto',
+  buildsTab: 'actions',
   debug: IS_STATIC_PREVIEW
     ? { ...EMPTY_DEBUG, ...SAMPLE_DEBUG, enabled: true }
     : EMPTY_DEBUG,
@@ -95,6 +110,12 @@ const load = (): Settings => {
         DEFAULTS.copilotPlan,
       ),
       claudePlan: pick(raw.claudePlan, CLAUDE_PLAN_KEYS, DEFAULTS.claudePlan),
+      workersPlan: pick<WorkersPlan | 'auto'>(
+        raw.workersPlan,
+        ['auto', ...WORKERS_PLAN_KEYS],
+        DEFAULTS.workersPlan,
+      ),
+      buildsTab: pick(raw.buildsTab, BUILDS_TABS, DEFAULTS.buildsTab),
       debug: {
         enabled: IS_STATIC_PREVIEW || d.enabled === true,
         githubPlan: pick<GithubPlan | ''>(
@@ -112,9 +133,15 @@ const load = (): Settings => {
           ['', ...CLAUDE_PLAN_KEYS],
           '',
         ),
+        workersPlan: pick<WorkersPlan | ''>(
+          d.workersPlan,
+          ['', ...WORKERS_PLAN_KEYS],
+          '',
+        ),
         codespacesHours: str(d.codespacesHours),
         codespacesStorageGb: str(d.codespacesStorageGb),
         actionsMinutes: str(d.actionsMinutes),
+        workersMinutes: str(d.workersMinutes),
         copilotUsd: str(d.copilotUsd),
         claudeUsd: str(d.claudeUsd),
         claudeTokensM: str(d.claudeTokensM),

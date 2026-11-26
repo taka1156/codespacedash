@@ -5,6 +5,9 @@ export interface Env {
   ANTHROPIC_ADMIN_KEY?: string;
   /** VAPID 秘密鍵（JWK を JSON 文字列のまま） */
   VAPID_PRIVATE_JWK?: string;
+  /** Workers Builds 用。ユーザー単位の API トークン（アカウント単位は Builds API が受け付けない） */
+  CLOUDFLARE_API_TOKEN?: string;
+  CLOUDFLARE_ACCOUNT_ID?: string;
 
   // ── Vars（wrangler.jsonc）──
   /** 例: yourteam.cloudflareaccess.com */

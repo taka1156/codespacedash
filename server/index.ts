@@ -17,6 +17,11 @@ import {
   getClaudeUsage,
 } from './lib/anthropic';
 import {
+  CloudflareError,
+  getWorkersBuilds,
+  workersConfigured,
+} from './lib/cloudflare';
+import {
   currentPeriod,
   GithubError,
   getBillingSummary,
@@ -64,10 +69,11 @@ api.get('/dashboard', async (c) => {
     : 'copilot';
   const hasClaude = claudeConfigured(c.env);
   const claudeApi = c.req.query('claudeApi') !== '0';
+  const hasWorkers = workersConfigured(c.env);
 
   // 1つ失敗しても他のパネルは表示できるよう個別に扱う
-  const [codespaces, runs, billing, copilot, claude] = await Promise.allSettled(
-    [
+  const [codespaces, runs, billing, copilot, claude, workers] =
+    await Promise.allSettled([
       listCodespaces(c.env),
       listRecentRuns(c.env),
       getBillingSummary(c.env, user.login, period),
@@ -77,8 +83,8 @@ api.get('/dashboard', async (c) => {
       aiProvider === 'claude' && hasClaude && claudeApi
         ? getClaudeUsage(c.env, period)
         : Promise.resolve(null),
-    ],
-  );
+      hasWorkers ? getWorkersBuilds(c.env) : Promise.resolve(null),
+    ]);
 
   const errors: DashboardResponse['errors'] = {};
   const entries = [
@@ -87,6 +93,7 @@ api.get('/dashboard', async (c) => {
     ['billing', billing],
     ['copilot', copilot],
     ['claude', claude],
+    ['workers', workers],
   ] as const;
   for (const [key, r] of entries) {
     const m = message(r);
@@ -107,6 +114,8 @@ api.get('/dashboard', async (c) => {
     premiumRequests: value(copilot),
     claudeUsage: value(claude),
     claudeConfigured: hasClaude,
+    workersBuilds: value(workers),
+    workersConfigured: hasWorkers,
     errors,
     notifyAfterMin: numVar(c.env.NOTIFY_AFTER_MIN, 60),
     fetchedAt: new Date().toISOString(),
@@ -167,7 +176,7 @@ api.onError((err, c) => {
     const status = err.status === 400 ? 400 : 502;
     return c.json<ApiErrorBody>({ error: err.message }, status);
   }
-  if (err instanceof AnthropicError) {
+  if (err instanceof AnthropicError || err instanceof CloudflareError) {
     return c.json<ApiErrorBody>({ error: err.message }, 502);
   }
   console.error(err);

@@ -4,6 +4,10 @@ GITHUB_TOKEN=github_pat_xxxxxxxxxxxx
 # Claude パネルを使う場合のみ（Anthropic の Admin API キー）
 # ANTHROPIC_ADMIN_KEY=sk-ant-admin01-xxxxxxxxxxxx
 
+# Workers Builds（Actions / Workers タブ）を使う場合のみ。ユーザー単位の API トークン
+# CLOUDFLARE_API_TOKEN=xxxxxxxxxxxx
+# CLOUDFLARE_ACCOUNT_ID=xxxxxxxxxxxx
+
 # プッシュ通知を試す場合のみ（yarn vapid で生成）
 # VAPID_PUBLIC_KEY=
 # VAPID_PRIVATE_JWK={"kty":"EC",...}

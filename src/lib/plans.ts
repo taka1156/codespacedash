@@ -15,6 +15,13 @@ export const GITHUB_PLANS = {
 } as const;
 export type GithubPlan = keyof typeof GITHUB_PLANS;
 
+/** Cloudflare Workers Builds のビルド時間（分/月） */
+export const WORKERS_PLANS = {
+  free: { label: 'Workers Free', buildMinutes: 3000 },
+  paid: { label: 'Workers Paid', buildMinutes: 6000 },
+} as const;
+export type WorkersPlan = keyof typeof WORKERS_PLANS;
+
 export const COPILOT_PLANS = {
   free: { label: 'Copilot Free', includedUsd: null },
   pro: { label: 'Copilot Pro', includedUsd: 10 },
@@ -40,6 +47,7 @@ export type ClaudePlan = keyof typeof CLAUDE_PLANS;
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
 export const GITHUB_PLAN_KEYS = keys(GITHUB_PLANS);
+export const WORKERS_PLAN_KEYS = keys(WORKERS_PLANS);
 export const COPILOT_PLAN_KEYS = keys(COPILOT_PLANS);
 export const CLAUDE_PLAN_KEYS = keys(CLAUDE_PLANS);
 
