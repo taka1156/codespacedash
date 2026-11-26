@@ -33,7 +33,7 @@ jobs:
       # C0〜C2 のどれかが 100% を下回ると失敗する
       - run: yarn test:coverage
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage
