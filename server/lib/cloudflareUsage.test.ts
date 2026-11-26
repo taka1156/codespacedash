@@ -1,8 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fakeEnv, json } from '../testing/fakeEnv';
 import { CloudflareError } from './cloudflare';
 import {
+  createGql,
   fetchCloudflareUsage,
   type Gql,
+  getCloudflareUsage,
   isAuthzError,
   latestPerKey,
   parseGqlResponse,
@@ -60,6 +63,15 @@ describe('sumRows', () => {
     expect(sumRows([{ v: 3 }, { v: 4.5 }, { v: null }, {}], (r) => r.v)).toBe(
       7.5,
     );
+  });
+
+  it('NaN・Infinity も 0 とみなす', () => {
+    expect(
+      sumRows(
+        [{ v: 1 }, { v: Number.NaN }, { v: Number.POSITIVE_INFINITY }],
+        (r) => r.v,
+      ),
+    ).toBe(1);
   });
 
   it('行がなければ 0', () => {
@@ -293,5 +305,146 @@ describe('fetchCloudflareUsage', () => {
     const u = await fetchCloudflareUsage(fakeGql(empty), NOW);
     expect(u.daily.kvWrites).toEqual({ status: 'ok', data: 0 });
     expect(u.monthly.r2StorageGb).toEqual({ status: 'ok', data: 0 });
+  });
+});
+
+describe('latestPerKey（新旧の順番）', () => {
+  it('古い行があとに来ても最新の値を残す', () => {
+    const rows = [
+      { k: 'a', t: '2026-11-27', v: 120 },
+      { k: 'a', t: '2026-11-26', v: 100 },
+    ];
+    expect(
+      latestPerKey(
+        rows,
+        (r) => r.k,
+        (r) => r.t,
+        (r) => r.v,
+      ),
+    ).toBe(120);
+  });
+
+  it('行がなければ 0', () => {
+    expect(
+      latestPerKey(
+        undefined,
+        () => '',
+        () => '',
+        () => 1,
+      ),
+    ).toBe(0);
+  });
+});
+
+describe('isAuthzError / parseGqlResponse（文言がないとき）', () => {
+  it('message も code もなければ認可エラーではない', () => {
+    expect(isAuthzError({})).toBe(false);
+  });
+
+  it('認可エラーの文言がなければ既定の文言', () => {
+    expect(() => parseGqlResponse(403, {})).toThrow('権限がありません');
+  });
+
+  it('HTTP エラーで errors がなければ既定の文言', () => {
+    expect(() => parseGqlResponse(500, null)).toThrow(
+      expect.objectContaining({
+        status: 502,
+        message: expect.stringContaining('応答が不正です'),
+      }),
+    );
+  });
+
+  it('errors が null でも accounts を読む', () => {
+    expect(() => parseGqlResponse(200, { data: null })).toThrow(
+      'アカウントが見つかりません',
+    );
+  });
+});
+
+describe('fetchCloudflareUsage（欠けたフィールド）', () => {
+  it('rows や dimensions がなくても 0 として数える', async () => {
+    const gql: Gql = async (query) =>
+      query.includes('r2StorageAdaptiveGroups') ||
+      query.includes('d1StorageAdaptiveGroups') ||
+      query.includes('kvStorageAdaptiveGroups') ||
+      query.includes('r2OperationsAdaptiveGroups')
+        ? {
+            rows: [
+              {
+                sum: { requests: 4 },
+                max: {
+                  payloadSize: 1024 ** 3,
+                  databaseSizeBytes: 1024 ** 3,
+                  byteCount: 1024 ** 3,
+                },
+              },
+            ],
+          }
+        : {};
+    const u = await fetchCloudflareUsage(gql, NOW);
+    expect(u.daily.workersRequests).toEqual({ status: 'ok', data: 0 });
+    // actionType がない操作は Class A 扱い（名前から推定できないので状態を変える操作とみなす）
+    expect(u.monthly.r2ClassA).toEqual({ status: 'ok', data: 4 });
+    expect(u.monthly.r2StorageGb).toEqual({ status: 'ok', data: 1 });
+    expect(u.monthly.d1StorageGb).toEqual({ status: 'ok', data: 1 });
+    expect(u.monthly.kvStorageGb).toEqual({ status: 'ok', data: 1 });
+  });
+
+  it('now を省略すると現在時刻で集計する', async () => {
+    vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
+    const u = await fetchCloudflareUsage(async () => ({ rows: [] }));
+    vi.useRealTimers();
+    expect(u.dayStart).toBe('2026-11-27T00:00:00.000Z');
+  });
+});
+
+describe('createGql / getCloudflareUsage', () => {
+  const fetchMock = vi.fn<typeof fetch>();
+  afterEach(() => {
+    fetchMock.mockReset();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+  const env = fakeEnv({
+    CLOUDFLARE_API_TOKEN: 'cf_token',
+    CLOUDFLARE_ACCOUNT_ID: 'acc',
+  });
+  const okBody = { data: { viewer: { accounts: [{ rows: [] }] } } };
+
+  it('トークンとアカウントを付けて GraphQL を呼ぶ', async () => {
+    vi.stubGlobal('fetch', fetchMock);
+    fetchMock.mockResolvedValue(json(okBody));
+    expect(await createGql(env)('query', { a: 1 })).toEqual({ rows: [] });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://api.cloudflare.com/client/v4/graphql');
+    expect(init?.headers).toMatchObject({ Authorization: 'Bearer cf_token' });
+    expect(JSON.parse(init?.body as string)).toEqual({
+      query: 'query',
+      variables: { accountTag: 'acc', a: 1 },
+    });
+  });
+
+  it('JSON でない応答はエラー', async () => {
+    vi.stubGlobal('fetch', fetchMock);
+    fetchMock.mockResolvedValue(new Response('<html>', { status: 502 }));
+    await expect(createGql(env)('q', {})).rejects.toMatchObject({
+      status: 502,
+    });
+  });
+
+  it('1分間はメモリのキャッシュを返す', async () => {
+    vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
+    vi.stubGlobal('fetch', fetchMock);
+    fetchMock.mockImplementation(async () => json(okBody));
+
+    const a = await getCloudflareUsage(env);
+    const calls = fetchMock.mock.calls.length;
+    expect(calls).toBeGreaterThan(0);
+    expect(await getCloudflareUsage(env)).toBe(a);
+    expect(fetchMock.mock.calls.length).toBe(calls);
+
+    vi.setSystemTime(NOW.getTime() + 60_000);
+    expect(await getCloudflareUsage(env)).not.toBe(a);
+    expect(fetchMock.mock.calls.length).toBe(calls * 2);
   });
 });

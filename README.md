@@ -25,8 +25,15 @@ Codespaces の消し忘れを PWA のプッシュ通知で知らせます。
 yarn install
 cp .dev.vars.example .dev.vars   # GITHUB_TOKEN などを記入
 yarn dev                         # http://localhost:5173（/api も同じオリジンで動く）
-yarn test                        # Vitest（集計・プラン判定などの関数のテスト）
+yarn test                        # Vitest（関数・API・画面のテスト）
+yarn test:coverage               # カバレッジ付き。C0〜C2 のどれかが 100% を下回ると失敗する
 ```
+
+テストのカバレッジは命令（C0）・分岐（C1）・条件（C2）の 100% を保っています。
+
+- C0・C1 は istanbul で測り、`vitest.config.ts` の閾値（100%）で確かめます。`&&` / `||` / `??` の各項が評価されたかも分岐として数えます
+- C2（各条件が真と偽の両方になったか）は istanbul だけでは分からないので、`scripts/check-condition-coverage.mjs` で各項の評価回数から求めて確かめます。値として使われるいちばん右の項（`a || 'fallback'` など）は、式が if・三項演算子の条件になっているときだけ対象にします
+- レポートは `coverage/index.html` に出ます
 
 localhost では Access の検証をスキップします。プッシュ通知を試す場合は `.dev.vars` に VAPID 鍵も入れてください。
 

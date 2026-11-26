@@ -41,10 +41,19 @@ const toGbMonth = (
   period: BillingUsageSummary['timePeriod'],
 ) => (/hour/i.test(unit) ? quantity / hoursInMonth(period) : quantity);
 
-export const codespacesQuota = (
+/** summary があれば必ず結果を返す（null を渡したときだけ null） */
+export function codespacesQuota(
+  summary: BillingUsageSummary,
+  plan?: GithubPlan,
+): QuotaUsage;
+export function codespacesQuota(
+  summary: BillingUsageSummary | null,
+  plan?: GithubPlan,
+): QuotaUsage | null;
+export function codespacesQuota(
   summary: BillingUsageSummary | null,
   plan: GithubPlan = 'free',
-): QuotaUsage | null => {
+): QuotaUsage | null {
   const items =
     summary?.usageItems.filter((i) => /codespaces/i.test(i.product)) ?? [];
   if (!summary) {
@@ -71,4 +80,4 @@ export const codespacesQuota = (
     usedStorageGbMonth: storageGbMonth,
     freeStorageGbMonth: GITHUB_PLANS[plan].codespacesStorageGbMonth,
   };
-};
+}

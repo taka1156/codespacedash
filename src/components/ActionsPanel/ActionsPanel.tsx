@@ -73,7 +73,6 @@ export const ActionsPanel = ({ billing, runs, plan }: Props) => {
     [];
 
   const hasUsage = Boolean(summary) && actionItems.length > 0;
-  const quota = actionsQuota(summary, plan);
 
   // 分単位の合計（unitType === "minutes"）
   const minuteItems = actionItems.filter((i) => i.unitType === 'minutes');
@@ -108,11 +107,11 @@ export const ActionsPanel = ({ billing, runs, plan }: Props) => {
       badgeText={hasUsage ? `${totalMinutes.toLocaleString()} 分` : undefined}
     >
       <div className={quotaWrap}>
-        {quota ? (
+        {billing.status === 'ok' ? (
           <QuotaBar
             label={`${GITHUB_PLANS[plan].label} の無料枠（Linux換算）`}
-            used={quota.usedMinutes}
-            free={quota.freeMinutes}
+            used={actionsQuota(billing.data, plan).usedMinutes}
+            free={GITHUB_PLANS[plan].actionsMinutes}
             unit="分"
           />
         ) : (
@@ -120,9 +119,7 @@ export const ActionsPanel = ({ billing, runs, plan }: Props) => {
             label={`${GITHUB_PLANS[plan].label} の無料枠（Linux換算）`}
             free={GITHUB_PLANS[plan].actionsMinutes}
             unit="分"
-            unavailable={
-              billing.status === 'ok' ? '取得失敗' : statusText(billing)
-            }
+            unavailable={statusText(billing)}
           />
         )}
       </div>

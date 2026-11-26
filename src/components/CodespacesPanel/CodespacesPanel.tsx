@@ -141,15 +141,11 @@ const Quota = ({
   billing: SectionState<BillingUsageSummary>;
   plan: GithubPlan;
 }) => {
-  const q = codespacesQuota(
-    billing.status === 'ok' ? billing.data : null,
-    plan,
-  );
   const { label } = GITHUB_PLANS[plan];
   const hours = `${label} の無料枠（2コア換算）`;
   const storage = `${label} のストレージ枠（停止中も加算）`;
-  if (billing.status !== 'ok' || !q) {
-    const why = billing.status === 'ok' ? '取得失敗' : statusText(billing);
+  if (billing.status !== 'ok') {
+    const why = statusText(billing);
     return (
       <div className={quotaBox}>
         <QuotaBar
@@ -167,6 +163,7 @@ const Quota = ({
       </div>
     );
   }
+  const q = codespacesQuota(billing.data, plan);
   return (
     <div className={quotaBox}>
       <QuotaBar

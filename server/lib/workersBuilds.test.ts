@@ -104,3 +104,27 @@ describe('usedMinutes', () => {
     expect(usedMinutes(builds, period)).toBe(13);
   });
 });
+
+describe('billingPeriod（不正なリセット日）', () => {
+  it('日付として読めなければタイムゾーン基準の今月', () => {
+    expect(
+      billingPeriod('not-a-date', 'UTC', new Date('2026-11-15T00:00:00Z')),
+    ).toEqual({
+      start: '2026-11-01T00:00:00.000Z',
+      end: '2026-12-01T00:00:00.000Z',
+    });
+  });
+});
+
+describe('buildMinutes（時刻の逆転）', () => {
+  it('終了が開始より前なら 0', () => {
+    expect(
+      buildMinutes(
+        build({
+          startedAt: '2026-11-10T00:05:00Z',
+          stoppedAt: '2026-11-10T00:00:00Z',
+        }),
+      ),
+    ).toBe(0);
+  });
+});

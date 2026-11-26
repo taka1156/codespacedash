@@ -60,7 +60,7 @@ const NumberRow = ({
   step = 'any',
 }: {
   label: string;
-  hint?: string;
+  hint: string;
   value: string;
   onChange: (v: string) => void;
   step?: string;
@@ -70,7 +70,7 @@ const NumberRow = ({
     <div className={row}>
       <label htmlFor={id}>
         {label}
-        {hint && <span className={rowHint}>{hint}</span>}
+        <span className={rowHint}>{hint}</span>
       </label>
       <input
         id={id}

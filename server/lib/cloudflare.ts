@@ -28,17 +28,18 @@ interface Envelope<T> {
 }
 
 const cf = async <T>(env: Env, path: string): Promise<Envelope<T>> => {
-  if (!workersConfigured(env)) {
+  const { CLOUDFLARE_API_TOKEN: token, CLOUDFLARE_ACCOUNT_ID: account } = env;
+  if (!token || !account) {
     throw new CloudflareError(
       500,
       'CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID が設定されていません',
     );
   }
   const res = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(env.CLOUDFLARE_ACCOUNT_ID ?? '')}${path}`,
+    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}${path}`,
     {
       headers: {
-        Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+        Authorization: `Bearer ${token}`,
         'User-Agent': 'codespacedash',
       },
     },
@@ -151,13 +152,12 @@ const listBuilds = async (env: Env, script: RawScript, period: Period) => {
     );
     const builds = (res.result ?? []).map((b) => toBuild(env, script.id, b));
     out.push(...builds);
-    const oldest = builds.at(-1);
     const totalPages = res.result_info?.total_pages ?? page;
     if (
       builds.length < BUILDS_PER_PAGE ||
       page >= totalPages ||
-      !oldest ||
-      new Date(oldest.createdAt).getTime() < start
+      // ここに来るのは1ページ分（50件）あるときだけなので、最後の要素は必ずある
+      new Date(builds[builds.length - 1].createdAt).getTime() < start
     ) {
       break;
     }
