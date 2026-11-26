@@ -58,6 +58,8 @@ export const CLOUDFLARE_DAILY_FREE = [
   { key: 'd1RowsWritten', label: 'D1 書き込み', free: 100_000, unit: '行' },
   { key: 'kvReads', label: 'KV 読み取り', free: 100_000, unit: '回' },
   { key: 'kvWrites', label: 'KV 書き込み', free: 1_000, unit: '回' },
+  { key: 'kvDeletes', label: 'KV 削除', free: 1_000, unit: '回' },
+  { key: 'kvLists', label: 'KV 一覧取得', free: 1_000, unit: '回' },
 ] as const satisfies readonly {
   key: CloudflareDailyKey;
   label: string;

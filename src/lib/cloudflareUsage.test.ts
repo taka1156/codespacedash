@@ -12,6 +12,8 @@ const usage: CloudflareUsage = {
     d1RowsWritten: ok(4),
     kvReads: ok(5),
     kvWrites: ok(6),
+    kvDeletes: ok(7),
+    kvLists: ok(8),
   },
   monthly: {
     r2StorageGb: ok(1.5),
@@ -47,14 +49,15 @@ describe('usageValues', () => {
     expect(Object.values(m ?? {}).every((v) => v === state)).toBe(true);
   });
 
-  it('全体が権限不足なら日次の6項目すべてが権限不足', () => {
+  it('全体が権限不足なら日次の8項目すべてが権限不足', () => {
     const state = {
       status: 'forbidden' as const,
       permission: 'Account Analytics: Read',
       message: '403',
     };
     const d = usageValues(state, 'daily');
-    expect(Object.values(d ?? {})).toHaveLength(6);
+    expect(Object.values(d ?? {})).toHaveLength(8);
+    expect(d?.kvLists).toBe(state);
     expect(d?.kvWrites).toBe(state);
   });
 

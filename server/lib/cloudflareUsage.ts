@@ -334,6 +334,8 @@ export const fetchCloudflareUsage = async (
     ],
     ['kvReads', item(async () => kvCount(await kv, 'read'))],
     ['kvWrites', item(async () => kvCount(await kv, 'write'))],
+    ['kvDeletes', item(async () => kvCount(await kv, 'delete'))],
+    ['kvLists', item(async () => kvCount(await kv, 'list'))],
   ];
 
   const monthly: [CloudflareMonthlyKey, Promise<SectionState<number>>][] = [

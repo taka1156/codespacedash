@@ -155,6 +155,8 @@ export const CLOUDFLARE_DAILY_KEYS = [
   'd1RowsWritten',
   'kvReads',
   'kvWrites',
+  'kvDeletes',
+  'kvLists',
 ] as const;
 export type CloudflareDailyKey = (typeof CLOUDFLARE_DAILY_KEYS)[number];
 

@@ -228,6 +228,8 @@ const mockUsage = (): CloudflareUsage => {
       d1RowsWritten: ok(3_200),
       kvReads: ok(9_800),
       kvWrites: ok(140),
+      kvDeletes: ok(35),
+      kvLists: ok(620),
     },
     monthly: {
       r2StorageGb: ok(3.2),

@@ -163,6 +163,8 @@ const allOk = {
     { sum: { requests: 500 }, dimensions: { actionType: 'read' } },
     { sum: { requests: 20 }, dimensions: { actionType: 'write' } },
     { sum: { requests: 7 }, dimensions: { actionType: 'delete' } },
+    { sum: { requests: 2 }, dimensions: { actionType: 'list' } },
+    { sum: { requests: 1 }, dimensions: { actionType: 'list' } },
   ],
   r2OperationsAdaptiveGroups: [
     { sum: { requests: 40 }, dimensions: { actionType: 'PutObject' } },
@@ -220,6 +222,8 @@ describe('fetchCloudflareUsage', () => {
       d1RowsWritten: 800,
       kvReads: 500,
       kvWrites: 20,
+      kvDeletes: 7,
+      kvLists: 3,
     });
     expect(
       Object.fromEntries(
