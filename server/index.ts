@@ -14,6 +14,7 @@ import {
   getWorkersBuilds,
   workersConfigured,
 } from './lib/cloudflare';
+import { getCloudflareUsage } from './lib/cloudflareUsage';
 import {
   currentPeriod,
   GithubError,
@@ -53,27 +54,37 @@ const PERM = {
   plan: 'Plan: Read',
   actions: 'Actions: Read（Repository permissions）',
   builds: 'Workers Builds Configuration: Read と Workers Scripts: Read',
+  // 使用量は項目ごとに判定するので、ここは全体が取れなかったとき用
+  analytics: 'Account Analytics: Read',
 } as const;
+
+const CF_SETTING = 'CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID';
 
 api.get('/dashboard', async (c) => {
   const user = await getUser(c.env);
   const period = currentPeriod(c.env.TIMEZONE);
 
   // 項目ごとに状態を返す（1つ失敗しても他のパネルは表示できる）
-  const [codespaces, billing, runs, copilot, builds] = await Promise.all([
-    settle(() => listCodespaces(c.env), PERM.codespaces),
-    settle(() => getBillingSummary(c.env, user.login, period), PERM.plan),
-    settle(() => listRecentRuns(c.env), PERM.actions),
-    settle(() => getPremiumRequests(c.env, user.login, period), PERM.plan),
-    workersConfigured(c.env)
-      ? settle(() => getWorkersBuilds(c.env), PERM.builds)
-      : unconfigured<never>('CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID'),
-  ]);
+  const hasCf = workersConfigured(c.env);
+  const [codespaces, billing, runs, copilot, builds, usage] = await Promise.all(
+    [
+      settle(() => listCodespaces(c.env), PERM.codespaces),
+      settle(() => getBillingSummary(c.env, user.login, period), PERM.plan),
+      settle(() => listRecentRuns(c.env), PERM.actions),
+      settle(() => getPremiumRequests(c.env, user.login, period), PERM.plan),
+      hasCf
+        ? settle(() => getWorkersBuilds(c.env), PERM.builds)
+        : unconfigured<never>(CF_SETTING),
+      hasCf
+        ? settle(() => getCloudflareUsage(c.env), PERM.analytics)
+        : unconfigured<never>(CF_SETTING),
+    ],
+  );
 
   return c.json<DashboardResponse>({
     user,
     github: { codespaces, billing, runs, copilot },
-    cloudflare: { builds },
+    cloudflare: { builds, usage },
     notifyAfterMin: numVar(c.env.NOTIFY_AFTER_MIN, 60),
     fetchedAt: new Date().toISOString(),
   });

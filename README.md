@@ -48,7 +48,7 @@ localhost では Access の検証をスキップします。プッシュ通知�
 | --------------- | -------------------------------------------------------- |
 | `Actions: Read` | Actions 実行履歴（最近 push した15リポジトリの直近10件） |
 
-### 2. Cloudflare API トークン（Workers Builds を使う場合のみ）
+### 2. Cloudflare API トークン（Cloudflare タブを使う場合のみ）
 
 Cloudflare タブで Workers Builds（Git 連携した Worker のビルド）を表示するのに使います。使わない場合はこの手順を飛ばしてください。Cloudflare タブの各パネルに「未設定」と表示されるだけで、ほかの表示には影響しません。
 
@@ -58,6 +58,7 @@ Cloudflare タブで Workers Builds（Git 連携した Worker のビルド）を
 | --- | --- |
 | `Workers Builds Configuration: Read` | ビルド履歴・ビルド時間の上限の取得 |
 | `Workers Scripts: Read` | Worker の一覧（ビルド履歴の取得に Worker の tag が必要） |
+| `Account Analytics: Read` | 無料枠の使用量（Workers リクエスト・Workers AI・D1・KV・R2）。GraphQL Analytics API で取得 |
 
 > **アカウント単位のトークン（Manage Account → Account API Tokens）は使えません。** Builds API はユーザー単位のトークンしか受け付けず、`Invalid token` エラーになります。
 > Read で 403 になる場合は `Workers Builds Configuration` を Edit にしてください（公式ガイドは Edit で案内しています）。
@@ -122,7 +123,11 @@ Yarn は `package.json` の `packageManager`（`yarn@1.22.22`）、Node.js は `
 - 上部のタブで **GitHub**（Codespaces / Actions / Copilot）と **Cloudflare**（Workers Builds / 日次の無料枠 / ストレージ・月次）を切り替えます。どちらのタブのデータも毎回取得し、見ていない側でビルドや実行が失敗していればタブに赤い点が付きます
 - PC ではパネルを3列・同じ高さに固定し、中身が多いときはパネルの中でスクロールします。スマホでは1列です
 - 取れなかった項目も枠はそのまま出し、中身だけ「未設定」「権限不足（足りない権限名）」「取得エラー」に差し替えます
-- 日次の無料枠・ストレージ・月次のパネルは枠だけ先に用意してあり、使用量の取得は未対応です
+- Cloudflare タブの「日次の無料枠」「ストレージ・月次」は GraphQL Analytics API から項目ごとに取得します（1分キャッシュ）
+  - 日次（00:00 UTC = 9:00 JST リセット）: Workers リクエスト、Workers AI（Neurons）、D1 の読み書き行数、KV の読み書き回数
+  - 月次・現在量: R2 の Class A / B 操作（UTC の今月、削除などの無料操作は除く）、R2・D1・KV のストレージ量
+  - 上限は Workers Free の無料枠で表示します（`src/lib/plans.ts`）。Paid では超過分が従量課金になるだけなので、目安として見てください
+  - 取得できなかった項目は、パネル内にエラー文と足りない権限名を出します
 
 ## 画面の設定（⚙ ボタン）
 

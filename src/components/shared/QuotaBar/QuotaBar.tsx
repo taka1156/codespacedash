@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import { fmtNum } from '@/lib/format';
 import {
   quotaFill,
   quotaHead,
@@ -10,9 +11,6 @@ import {
   quotaUnavailable,
   quotaValue,
 } from './style.css';
-
-const fmtNum = (n: number) =>
-  n < 10 ? n.toFixed(1) : Math.round(n).toLocaleString();
 
 type Props = {
   label: string;

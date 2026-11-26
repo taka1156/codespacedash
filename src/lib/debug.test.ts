@@ -37,6 +37,7 @@ const data = (usageItems: BillingUsageItem[]): DashboardResponse => ({
   },
   cloudflare: {
     builds: { status: 'unconfigured', setting: 'CLOUDFLARE_API_TOKEN' },
+    usage: { status: 'unconfigured', setting: 'CLOUDFLARE_API_TOKEN' },
   },
   notifyAfterMin: 60,
   fetchedAt: '2026-11-26T00:00:00Z',
@@ -96,6 +97,7 @@ describe('resolvePlans（Workers）', () => {
   ): DashboardResponse => ({
     ...data([]),
     cloudflare: {
+      usage: { status: 'unconfigured', setting: 'CLOUDFLARE_API_TOKEN' },
       builds: {
         status: 'ok',
         data: {
@@ -153,6 +155,10 @@ describe('applyDebug（取得状態の上書き）', () => {
       permission: 'Actions: Read',
     });
     expect(out?.cloudflare.builds.status).toBe('forbidden');
+    expect(out?.cloudflare.usage).toMatchObject({
+      status: 'forbidden',
+      permission: 'Account Analytics: Read',
+    });
   });
 
   it('上書きしなければ元の状態のまま', () => {

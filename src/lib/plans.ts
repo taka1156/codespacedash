@@ -1,3 +1,8 @@
+import type {
+  CloudflareDailyKey,
+  CloudflareMonthlyKey,
+} from '../../shared/types';
+
 export const GITHUB_PLANS = {
   free: {
     label: 'GitHub Free',
@@ -53,15 +58,27 @@ export const CLOUDFLARE_DAILY_FREE = [
   { key: 'd1RowsWritten', label: 'D1 書き込み', free: 100_000, unit: '行' },
   { key: 'kvReads', label: 'KV 読み取り', free: 100_000, unit: '回' },
   { key: 'kvWrites', label: 'KV 書き込み', free: 1_000, unit: '回' },
-] as const;
+] as const satisfies readonly {
+  key: CloudflareDailyKey;
+  label: string;
+  free: number;
+  unit: string;
+}[];
 
 /** 月次（R2）と総量（D1 ストレージ）の無料枠 */
 export const CLOUDFLARE_STORAGE_FREE = [
-  { key: 'r2StorageGb', label: 'R2 ストレージ', free: 10, unit: 'GB-月' },
+  // 今の保存量（GB）。同じ量を1か月置くと GB-月 と同じになる
+  { key: 'r2StorageGb', label: 'R2 ストレージ（現在）', free: 10, unit: 'GB' },
   { key: 'r2ClassA', label: 'R2 Class A 操作', free: 1_000_000, unit: '回' },
   { key: 'r2ClassB', label: 'R2 Class B 操作', free: 10_000_000, unit: '回' },
   { key: 'd1StorageGb', label: 'D1 ストレージ', free: 5, unit: 'GB' },
-] as const;
+  { key: 'kvStorageGb', label: 'KV ストレージ', free: 1, unit: 'GB' },
+] as const satisfies readonly {
+  key: CloudflareMonthlyKey;
+  label: string;
+  free: number;
+  unit: string;
+}[];
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
 export const GITHUB_PLAN_KEYS = keys(GITHUB_PLANS);

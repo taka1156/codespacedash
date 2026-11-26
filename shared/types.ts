@@ -147,6 +147,35 @@ export interface WorkersBuildsSummary {
   limitReached: boolean;
 }
 
+// Cloudflare の無料枠の使用量（GraphQL Analytics）
+export const CLOUDFLARE_DAILY_KEYS = [
+  'workersRequests',
+  'workersAiNeurons',
+  'd1RowsRead',
+  'd1RowsWritten',
+  'kvReads',
+  'kvWrites',
+] as const;
+export type CloudflareDailyKey = (typeof CLOUDFLARE_DAILY_KEYS)[number];
+
+export const CLOUDFLARE_MONTHLY_KEYS = [
+  'r2StorageGb',
+  'r2ClassA',
+  'r2ClassB',
+  'd1StorageGb',
+  'kvStorageGb',
+] as const;
+export type CloudflareMonthlyKey = (typeof CLOUDFLARE_MONTHLY_KEYS)[number];
+
+export interface CloudflareUsage {
+  /** UTC の今日（00:00 UTC〜）の使用量。項目ごとに取れたかどうかが違う */
+  daily: Record<CloudflareDailyKey, SectionState<number>>;
+  /** R2 の操作回数は UTC の今月、ストレージ（GB）は現在の量 */
+  monthly: Record<CloudflareMonthlyKey, SectionState<number>>;
+  dayStart: string;
+  monthStart: string;
+}
+
 // ── 項目ごとの取得状態 ──
 // 取れなかったときもパネルの枠は同じまま出し、中身だけこの状態で差し替える
 
@@ -173,6 +202,7 @@ export interface DashboardResponse {
   };
   cloudflare: {
     builds: SectionState<WorkersBuildsSummary>;
+    usage: SectionState<CloudflareUsage>;
   };
   notifyAfterMin: number;
   fetchedAt: string;

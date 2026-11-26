@@ -8,6 +8,7 @@ import {
 import { asset, IS_STATIC_PREVIEW } from './preview';
 import {
   type BillingUsageItem,
+  type CloudflareUsage,
   type Codespace,
   type DashboardResponse,
   okData,
@@ -217,6 +218,33 @@ const mockWorkers = (minutes: number): WorkersBuildsSummary => {
 
 const ok = <T>(data: T) => ({ status: 'ok' as const, data });
 
+const mockUsage = (): CloudflareUsage => {
+  const d = new Date();
+  return {
+    daily: {
+      workersRequests: ok(18_400),
+      workersAiNeurons: ok(8_650),
+      d1RowsRead: ok(1_240_000),
+      d1RowsWritten: ok(3_200),
+      kvReads: ok(9_800),
+      kvWrites: ok(140),
+    },
+    monthly: {
+      r2StorageGb: ok(3.2),
+      r2ClassA: ok(42_000),
+      r2ClassB: ok(610_000),
+      d1StorageGb: ok(0.04),
+      kvStorageGb: ok(0.12),
+    },
+    dayStart: new Date(
+      Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+    ).toISOString(),
+    monthStart: new Date(
+      Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1),
+    ).toISOString(),
+  };
+};
+
 const mockBase = (): DashboardResponse => ({
   user: {
     login: 'preview-user',
@@ -233,6 +261,7 @@ const mockBase = (): DashboardResponse => ({
   },
   cloudflare: {
     builds: ok(mockWorkers(0)),
+    usage: ok(mockUsage()),
   },
   notifyAfterMin: 60,
   fetchedAt: new Date().toISOString(),
@@ -375,11 +404,10 @@ export const applyDebug = (
       runs: fake('GITHUB_TOKEN', 'Actions: Read'),
       copilot: fake('GITHUB_TOKEN', 'Plan: Read'),
     };
+    const cf = 'CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID';
     out.cloudflare = {
-      builds: fake(
-        'CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID',
-        'Workers Builds Configuration: Read',
-      ),
+      builds: fake(cf, 'Workers Builds Configuration: Read'),
+      usage: fake(cf, 'Account Analytics: Read'),
     };
   }
 

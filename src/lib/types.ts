@@ -2,6 +2,9 @@
 export type {
   BillingUsageItem,
   BillingUsageSummary,
+  CloudflareDailyKey,
+  CloudflareMonthlyKey,
+  CloudflareUsage,
   Codespace,
   CodespaceState,
   DashboardResponse,

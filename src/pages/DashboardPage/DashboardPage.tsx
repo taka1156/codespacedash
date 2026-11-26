@@ -7,6 +7,7 @@ import { PanelTabs } from '@/components/shared/PanelTabs/PanelTabs';
 import { WorkersPanel } from '@/components/WorkersPanel/WorkersPanel';
 import { useDashboard } from '@/hooks/useDashboard';
 import { type ServiceTab, useSettings } from '@/hooks/useSettings';
+import { usageValues } from '@/lib/cloudflareUsage';
 import { applyDebug, resolvePlans } from '@/lib/debug';
 import { CLOUDFLARE_DAILY_FREE, CLOUDFLARE_STORAGE_FREE } from '@/lib/plans';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
@@ -142,14 +143,16 @@ export const DashboardPage = () => {
               icon="◷"
               subTitle="毎日 9:00（00:00 UTC）にリセット"
               items={CLOUDFLARE_DAILY_FREE}
-              note="Workers Free の上限です。超えるとその日はリクエストやクエリが失敗します（Paid は超過分が従量課金）。"
+              values={usageValues(data.cloudflare.usage, 'daily')}
+              note="Workers Free の上限です。超えるとその日はリクエストやクエリが失敗します（Paid は超過分が従量課金）。Analytics の集計なので数分遅れることがあります。"
             />
             <CloudflareUsagePanel
               title="ストレージ・月次"
               icon="▤"
-              subTitle="R2 は月次、D1 ストレージは総量"
+              subTitle="R2 の操作は月次、ストレージは今の量"
               items={CLOUDFLARE_STORAGE_FREE}
-              note="R2 の操作回数は毎月リセット。D1 ストレージはアカウント全体の合計（Free は 1 DB 500 MB まで）。"
+              values={usageValues(data.cloudflare.usage, 'monthly')}
+              note="R2 の操作回数は UTC の今月の合計（削除は無料なので含めない）。ストレージは今の保存量（D1・KV はアカウント全体の合計。D1 は Free だと 1 DB 500 MB まで）。KV ストレージは Paid でも 1 GB を超えた分が従量課金。"
             />
           </div>
         )}
