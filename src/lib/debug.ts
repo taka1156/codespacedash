@@ -188,6 +188,8 @@ const mockBase = (
 
 const LINUX_USD_PER_MIN = 0.006;
 
+const isCsStorage = (i: BillingUsageItem) => /storage/i.test(i.sku);
+
 const mockClaude = (usd: number, tokensM: number): ClaudeUsage => {
   const { year, month } = now();
   const today = new Date().getDate();
@@ -248,18 +250,39 @@ export const applyDebug = (
   };
 
   const csHours = num(d.codespacesHours);
+  const csStorage = num(d.codespacesStorageGb);
   const actMin = num(d.actionsMinutes);
-  if (csHours !== null || actMin !== null) {
+  if (csHours !== null || csStorage !== null || actMin !== null) {
     const summary = out.billingSummary ?? { timePeriod: now(), usageItems: [] };
     let items = summary.usageItems;
     if (csHours !== null) {
       items = [
-        ...items.filter((i) => !/codespaces/i.test(i.product)),
+        ...items.filter(
+          (i) => !(/codespaces/i.test(i.product) && !isCsStorage(i)),
+        ),
         item({
           product: 'codespaces',
-          sku: 'Codespaces compute 2 core',
+          sku: 'codespaces_compute_d2',
           unitType: 'hours',
           grossQuantity: csHours,
+        }),
+      ];
+    }
+    if (csStorage !== null) {
+      // 実際の API と同じく GB-時間 で入れる（表示側で GB-月 に換算される）
+      const { year, month } = summary.timePeriod;
+      const hours = month
+        ? new Date(year, month, 0).getDate() * 24
+        : (365 * 24) / 12;
+      items = [
+        ...items.filter(
+          (i) => !(/codespaces/i.test(i.product) && isCsStorage(i)),
+        ),
+        item({
+          product: 'codespaces',
+          sku: 'codespaces_storage',
+          unitType: 'GigabyteHours',
+          grossQuantity: csStorage * hours,
         }),
       ];
     }

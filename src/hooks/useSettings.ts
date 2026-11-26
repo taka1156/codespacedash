@@ -19,6 +19,7 @@ export interface DebugSettings {
   copilotPlan: CopilotPlan | '';
   claudePlan: ClaudePlan | '';
   codespacesHours: string;
+  codespacesStorageGb: string;
   actionsMinutes: string;
   copilotUsd: string;
   claudeUsd: string;
@@ -39,6 +40,7 @@ export const EMPTY_DEBUG: DebugSettings = {
   copilotPlan: '',
   claudePlan: '',
   codespacesHours: '',
+  codespacesStorageGb: '',
   actionsMinutes: '',
   copilotUsd: '',
   claudeUsd: '',
@@ -47,6 +49,7 @@ export const EMPTY_DEBUG: DebugSettings = {
 
 export const SAMPLE_DEBUG: Partial<DebugSettings> = {
   codespacesHours: '48',
+  codespacesStorageGb: '11.5',
   actionsMinutes: '1650',
   copilotUsd: '7.4',
   claudeUsd: '63.2',
@@ -110,6 +113,7 @@ const load = (): Settings => {
           '',
         ),
         codespacesHours: str(d.codespacesHours),
+        codespacesStorageGb: str(d.codespacesStorageGb),
         actionsMinutes: str(d.actionsMinutes),
         copilotUsd: str(d.copilotUsd),
         claudeUsd: str(d.claudeUsd),
