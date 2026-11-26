@@ -9,9 +9,11 @@ import {
   YAxis,
 } from 'recharts';
 import { COPILOT_PLANS, type CopilotPlan } from '@/lib/plans';
-import type { PremiumRequestUsage } from '@/lib/types';
+import { statusText } from '@/lib/sectionStatus';
+import type { PremiumRequestUsage, SectionState } from '@/lib/types';
 import { BasePanel } from '../shared/BasePanel/BasePanel';
 import { QuotaBar } from '../shared/QuotaBar/QuotaBar';
+import { StatusNote } from '../shared/StatusNote/StatusNote';
 import {
   accentCyan,
   accentGreen,
@@ -37,7 +39,7 @@ import {
 } from './style.css';
 
 interface Props {
-  premiumRequests: PremiumRequestUsage | null;
+  premiumRequests: SectionState<PremiumRequestUsage>;
   plan: CopilotPlan;
 }
 
@@ -50,7 +52,8 @@ const MODEL_COLORS = [
   '#f87171',
 ];
 
-export const CopilotPanel = ({ premiumRequests, plan }: Props) => {
+export const CopilotPanel = ({ premiumRequests: state, plan }: Props) => {
+  const premiumRequests = state.status === 'ok' ? state.data : null;
   // モデル別集計
   const modelData = (premiumRequests?.usageItems ?? []).map((item, i) => ({
     name: item.model,
@@ -66,19 +69,29 @@ export const CopilotPanel = ({ premiumRequests, plan }: Props) => {
     0,
   );
   const { label: planLabel, includedUsd } = COPILOT_PLANS[plan];
+  const quotaLabel = `${planLabel} の AI Credits`;
   const quota =
-    includedUsd !== null && premiumRequests ? (
+    includedUsd === null ? null : (
       <div style={{ marginBottom: 16 }}>
-        <QuotaBar
-          label={`${planLabel} の AI Credits`}
-          used={usedUsd}
-          free={includedUsd}
-          unit="USD"
-        />
+        {premiumRequests ? (
+          <QuotaBar
+            label={quotaLabel}
+            used={usedUsd}
+            free={includedUsd}
+            unit="USD"
+          />
+        ) : (
+          <QuotaBar
+            label={quotaLabel}
+            free={includedUsd}
+            unit="USD"
+            unavailable={state.status === 'ok' ? '取得失敗' : statusText(state)}
+          />
+        )}
       </div>
-    ) : null;
+    );
 
-  if (!premiumRequests || modelData.length === 0) {
+  if (state.status !== 'ok' || modelData.length === 0) {
     return (
       <BasePanel
         title="Copilot"
@@ -87,18 +100,19 @@ export const CopilotPanel = ({ premiumRequests, plan }: Props) => {
         badgeText={planLabel}
       >
         {quota}
-        <div className={copilotGrid}>
-          <div className={`${copilotCard} ${copilotPremiumNote}`}>
-            <span className={copilotIcon}>💡</span>
-            <div>
-              <p className={copilotLabel}>プレミアムリクエスト</p>
-              <p className={copilotValSmall}>
-                GITHUB_TOKEN に <code>Plan (read)</code> 権限を付与すると、
-                モデル別リクエスト数・費用が表示されます
-              </p>
+        {state.status !== 'ok' ? (
+          <StatusNote state={state} what="プレミアムリクエスト" />
+        ) : (
+          <div className={copilotGrid}>
+            <div className={`${copilotCard} ${copilotPremiumNote}`}>
+              <span className={copilotIcon}>💡</span>
+              <div>
+                <p className={copilotLabel}>プレミアムリクエスト</p>
+                <p className={copilotValSmall}>今月はまだ使われていません</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </BasePanel>
     );
   }
@@ -175,7 +189,7 @@ export const CopilotPanel = ({ premiumRequests, plan }: Props) => {
                   borderRadius: 8,
                 }}
                 itemStyle={{ color: '#f1f5f9' }}
-                formatter={(v: number) => [`${v.toLocaleString()} 回`, '']}
+                formatter={(v) => [`${Number(v).toLocaleString()} 回`, '']}
               />
               <Bar dataKey="requests" radius={[4, 4, 0, 0]}>
                 {modelData.map((d) => (

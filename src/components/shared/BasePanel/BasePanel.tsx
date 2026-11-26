@@ -1,30 +1,28 @@
 import {
   panel,
+  panelBody,
   panelHeader,
   panelSub,
   panelTitle,
   statBadge,
 } from './style.css';
 
+/** すべてのパネルの共通の枠（ヘッダー + 中身）。中身が取れなくても枠の大きさは変えない */
 export const BasePanel = ({
   title,
   subTitle,
   icon,
   badgeText,
-  tabs,
   children,
 }: {
   title: string;
   subTitle?: string;
   icon: string;
   badgeText?: string;
-  /** パネルの一番上に出す切り替えタブ */
-  tabs?: React.ReactNode;
   children: React.ReactNode;
 }) => {
   return (
     <section className={panel}>
-      {tabs}
       <div className={panelHeader}>
         <div>
           <h2 className={panelTitle}>
@@ -34,7 +32,7 @@ export const BasePanel = ({
         </div>
         {badgeText && <div className={statBadge}>{badgeText}</div>}
       </div>
-      {children}
+      <div className={panelBody}>{children}</div>
     </section>
   );
 };

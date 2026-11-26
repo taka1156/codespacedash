@@ -1,28 +1,27 @@
 import type { Settings } from '@/hooks/useSettings';
 import {
-  type ClaudePlan,
   type CopilotPlan,
   type GithubPlan,
   githubPlanFromApi,
   type WorkersPlan,
 } from './plans';
 import { asset, IS_STATIC_PREVIEW } from './preview';
-import type {
-  BillingUsageItem,
-  ClaudeUsage,
-  Codespace,
-  DashboardResponse,
-  PremiumRequestUsage,
-  WorkerBuild,
-  WorkersBuildsSummary,
-  WorkflowRun,
+import {
+  type BillingUsageItem,
+  type Codespace,
+  type DashboardResponse,
+  okData,
+  type PremiumRequestUsage,
+  type SectionState,
+  type WorkerBuild,
+  type WorkersBuildsSummary,
+  type WorkflowRun,
 } from './types';
 
 export interface ResolvedPlans {
   github: GithubPlan;
   githubDetected: GithubPlan;
   copilot: CopilotPlan;
-  claude: ClaudePlan;
   workers: WorkersPlan;
   workersDetected: WorkersPlan;
 }
@@ -32,6 +31,7 @@ export const resolvePlans = (
   data: DashboardResponse | null,
 ): ResolvedPlans => {
   const d = settings.debug.enabled ? settings.debug : null;
+  const detected = okData(data?.cloudflare.builds)?.detectedPlan ?? 'free';
   return {
     github:
       d?.githubPlan ||
@@ -40,13 +40,10 @@ export const resolvePlans = (
         : settings.githubPlan),
     githubDetected: githubPlanFromApi(data?.user.plan),
     copilot: d?.copilotPlan || settings.copilotPlan,
-    claude: d?.claudePlan || settings.claudePlan,
     workers:
       d?.workersPlan ||
-      (settings.workersPlan === 'auto'
-        ? (data?.workersBuilds?.detectedPlan ?? 'free')
-        : settings.workersPlan),
-    workersDetected: data?.workersBuilds?.detectedPlan ?? 'free',
+      (settings.workersPlan === 'auto' ? detected : settings.workersPlan),
+    workersDetected: detected,
   };
 };
 
@@ -218,9 +215,9 @@ const mockWorkers = (minutes: number): WorkersBuildsSummary => {
   };
 };
 
-const mockBase = (
-  aiProvider: DashboardResponse['aiProvider'],
-): DashboardResponse => ({
+const ok = <T>(data: T) => ({ status: 'ok' as const, data });
+
+const mockBase = (): DashboardResponse => ({
   user: {
     login: 'preview-user',
     name: 'Preview',
@@ -228,16 +225,15 @@ const mockBase = (
     html_url: 'https://github.com',
     plan: 'free',
   },
-  codespaces: mockCodespaces(),
-  workflowRuns: mockRuns(),
-  billingSummary: { timePeriod: now(), usageItems: [] },
-  aiProvider,
-  premiumRequests: { timePeriod: now(), usageItems: [] },
-  claudeUsage: mockClaude(0, 0),
-  claudeConfigured: true,
-  workersBuilds: mockWorkers(0),
-  workersConfigured: true,
-  errors: {},
+  github: {
+    codespaces: ok(mockCodespaces()),
+    billing: ok({ timePeriod: now(), usageItems: [] }),
+    runs: ok(mockRuns()),
+    copilot: ok({ timePeriod: now(), usageItems: [] }),
+  },
+  cloudflare: {
+    builds: ok(mockWorkers(0)),
+  },
   notifyAfterMin: 60,
   fetchedAt: new Date().toISOString(),
 });
@@ -245,46 +241,6 @@ const mockBase = (
 const LINUX_USD_PER_MIN = 0.006;
 
 const isCsStorage = (i: BillingUsageItem) => /storage/i.test(i.sku);
-
-const mockClaude = (usd: number, tokensM: number): ClaudeUsage => {
-  const { year, month } = now();
-  const today = new Date().getDate();
-  const total = tokensM * 1e6;
-  const split = (t: number) => ({
-    input: Math.round(t * 0.06),
-    cacheWrite: Math.round(t * 0.1),
-    cacheRead: Math.round(t * 0.8),
-    output: Math.round(t * 0.04),
-  });
-  const weights = Array.from(
-    { length: today },
-    (_, i) => 0.4 + Math.abs(Math.sin(i * 1.7)),
-  );
-  const wSum = weights.reduce((a, b) => a + b, 0);
-  return {
-    timePeriod: { year, month },
-    models: [
-      {
-        model: 'claude-opus-5-5',
-        ...split(total * 0.35),
-        webSearchRequests: 12,
-        costUsd: usd * 0.7,
-      },
-      {
-        model: 'claude-sonnet-5-5',
-        ...split(total * 0.65),
-        webSearchRequests: 0,
-        costUsd: usd * 0.3,
-      },
-    ],
-    daily: weights.map((w, i) => ({
-      date: `${year}-${String(month).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`,
-      ...split((total * w) / wSum),
-      costUsd: (usd * w) / wSum,
-    })),
-    totalCostUsd: usd,
-  };
-};
 
 export const applyDebug = (
   data: DashboardResponse | null,
@@ -294,22 +250,24 @@ export const applyDebug = (
   if (!d.enabled) {
     return data;
   }
-  const base =
-    data ?? (IS_STATIC_PREVIEW ? mockBase(settings.aiProvider) : null);
+  const base = data ?? (IS_STATIC_PREVIEW ? mockBase() : null);
   if (!base) {
     return null;
   }
   const out: DashboardResponse = {
     ...base,
-    aiProvider: data?.aiProvider ?? settings.aiProvider,
-    errors: { ...base.errors },
+    github: { ...base.github },
+    cloudflare: { ...base.cloudflare },
   };
 
   const csHours = num(d.codespacesHours);
   const csStorage = num(d.codespacesStorageGb);
   const actMin = num(d.actionsMinutes);
   if (csHours !== null || csStorage !== null || actMin !== null) {
-    const summary = out.billingSummary ?? { timePeriod: now(), usageItems: [] };
+    const summary = okData(out.github.billing) ?? {
+      timePeriod: now(),
+      usageItems: [],
+    };
     let items = summary.usageItems;
     if (csHours !== null) {
       items = [
@@ -360,17 +318,15 @@ export const applyDebug = (
         }),
       ];
     }
-    out.billingSummary = { ...summary, usageItems: items };
+    out.github.billing = ok({ ...summary, usageItems: items });
   }
 
   const wkMin = num(d.workersMinutes);
   if (wkMin !== null) {
-    out.workersBuilds = {
-      ...(out.workersBuilds ?? mockWorkers(0)),
+    out.cloudflare.builds = ok({
+      ...(okData(out.cloudflare.builds) ?? mockWorkers(0)),
       usedMinutes: wkMin,
-    };
-    out.workersConfigured = true;
-    delete out.errors.workers;
+    });
   }
 
   const cpUsd = num(d.copilotUsd);
@@ -398,16 +354,33 @@ export const applyDebug = (
         },
       ],
     };
-    out.premiumRequests = p;
-    delete out.errors.copilot;
+    out.github.copilot = ok(p);
   }
 
-  const clUsd = num(d.claudeUsd);
-  const clTok = num(d.claudeTokensM);
-  if (clUsd !== null || clTok !== null) {
-    out.claudeUsage = mockClaude(clUsd ?? 0, clTok ?? 0);
-    out.claudeConfigured = true;
-    delete out.errors.claude;
+  if (d.sectionState) {
+    const fake = (setting: string, permission: string): SectionState<never> =>
+      d.sectionState === 'unconfigured'
+        ? { status: 'unconfigured', setting }
+        : d.sectionState === 'forbidden'
+          ? {
+              status: 'forbidden',
+              permission,
+              message:
+                'API 403: Resource not accessible（デバッグの疑似エラー）',
+            }
+          : { status: 'error', message: 'API 500（デバッグの疑似エラー）' };
+    out.github = {
+      codespaces: fake('GITHUB_TOKEN', 'Codespaces: Read'),
+      billing: fake('GITHUB_TOKEN', 'Plan: Read'),
+      runs: fake('GITHUB_TOKEN', 'Actions: Read'),
+      copilot: fake('GITHUB_TOKEN', 'Plan: Read'),
+    };
+    out.cloudflare = {
+      builds: fake(
+        'CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID',
+        'Workers Builds Configuration: Read',
+      ),
+    };
   }
 
   return out;

@@ -35,3 +35,14 @@ export const quotaFill = style({
 export const quotaOk = style({ background: 'var(--green)' });
 
 export const quotaLow = style({ background: 'var(--red)' });
+
+/** 取得できなかった項目の右側の注記 */
+export const quotaUnavailable = style({
+  color: 'var(--text-dim)',
+});
+
+export const quotaTrackEmpty = style({
+  opacity: 0.5,
+  backgroundImage:
+    'repeating-linear-gradient(-45deg, transparent 0 6px, rgba(255,255,255,0.04) 6px 12px)',
+});

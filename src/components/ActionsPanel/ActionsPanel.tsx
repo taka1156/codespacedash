@@ -11,9 +11,15 @@ import {
 } from 'recharts';
 import { actionsQuota } from '@/lib/actionsQuota';
 import { GITHUB_PLANS, type GithubPlan } from '@/lib/plans';
-import type { BillingUsageSummary, WorkflowRun } from '@/lib/types';
+import { statusText } from '@/lib/sectionStatus';
+import type {
+  BillingUsageSummary,
+  SectionState,
+  WorkflowRun,
+} from '@/lib/types';
 import { BasePanel } from '../shared/BasePanel/BasePanel';
 import { QuotaBar } from '../shared/QuotaBar/QuotaBar';
+import { StatusNote } from '../shared/StatusNote/StatusNote';
 import { RunHistory } from './RunHistory';
 import {
   accentCyan,
@@ -36,10 +42,9 @@ import {
 } from './style.css';
 
 interface Props {
-  summary: BillingUsageSummary | null;
-  runs: WorkflowRun[] | null;
+  billing: SectionState<BillingUsageSummary>;
+  runs: SectionState<WorkflowRun[]>;
   plan: GithubPlan;
-  tabs?: React.ReactNode;
 }
 
 const SKU_LABEL: Record<string, string> = {
@@ -60,7 +65,8 @@ const SKU_COLOR: Record<string, string> = {
   'Actions Windows': '#38bdf8',
 };
 
-export const ActionsPanel = ({ summary, runs, plan, tabs }: Props) => {
+export const ActionsPanel = ({ billing, runs, plan }: Props) => {
+  const summary = billing.status === 'ok' ? billing.data : null;
   // usageItems から Actions だけ抽出
   const actionItems =
     summary?.usageItems.filter((i) => i.product.toLowerCase() === 'actions') ??
@@ -100,18 +106,26 @@ export const ActionsPanel = ({ summary, runs, plan, tabs }: Props) => {
           : undefined
       }
       badgeText={hasUsage ? `${totalMinutes.toLocaleString()} 分` : undefined}
-      tabs={tabs}
     >
-      {quota && (
-        <div className={quotaWrap}>
+      <div className={quotaWrap}>
+        {quota ? (
           <QuotaBar
             label={`${GITHUB_PLANS[plan].label} の無料枠（Linux換算）`}
             used={quota.usedMinutes}
             free={quota.freeMinutes}
             unit="分"
           />
-        </div>
-      )}
+        ) : (
+          <QuotaBar
+            label={`${GITHUB_PLANS[plan].label} の無料枠（Linux換算）`}
+            free={GITHUB_PLANS[plan].actionsMinutes}
+            unit="分"
+            unavailable={
+              billing.status === 'ok' ? '取得失敗' : statusText(billing)
+            }
+          />
+        )}
+      </div>
       {hasUsage ? (
         <>
           <div className={billingGrid}>
@@ -201,7 +215,7 @@ export const ActionsPanel = ({ summary, runs, plan, tabs }: Props) => {
                       borderRadius: 8,
                     }}
                     itemStyle={{ color: '#f1f5f9' }}
-                    formatter={(v: number) => [`${v.toLocaleString()} 分`, '']}
+                    formatter={(v) => [`${Number(v).toLocaleString()} 分`, '']}
                   />
                   <Bar dataKey="minutes" radius={[4, 4, 0, 0]}>
                     {barData.map((d) => (
@@ -213,14 +227,10 @@ export const ActionsPanel = ({ summary, runs, plan, tabs }: Props) => {
             </div>
           )}
         </>
+      ) : billing.status !== 'ok' ? (
+        <StatusNote state={billing} what="実行時間" />
       ) : (
-        <div className={emptyState}>
-          実行時間を取得できませんでした
-          <br />
-          <small>
-            GITHUB_TOKEN に <code>Plan (read)</code> 権限が必要です
-          </small>
-        </div>
+        <div className={emptyState}>今月の実行時間はまだありません</div>
       )}
       <RunHistory runs={runs} />
     </BasePanel>

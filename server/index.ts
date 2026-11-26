@@ -1,8 +1,6 @@
 import { Hono } from 'hono';
 import { secureHeaders } from 'hono/secure-headers';
 import {
-  AI_PROVIDERS,
-  type AiProvider,
   type ApiErrorBody,
   CSRF_HEADER,
   CSRF_VALUE,
@@ -11,11 +9,6 @@ import {
 } from '../shared/types';
 import { type AppEnv, type Env, numVar } from './env';
 import { cloudflareAccess } from './lib/access';
-import {
-  AnthropicError,
-  claudeConfigured,
-  getClaudeUsage,
-} from './lib/anthropic';
 import {
   CloudflareError,
   getWorkersBuilds,
@@ -39,6 +32,7 @@ import {
   saveSubscription,
   sendToAll,
 } from './lib/push';
+import { settle, unconfigured } from './lib/section';
 
 const api = new Hono<AppEnv>().basePath('/api');
 
@@ -53,70 +47,33 @@ api.use(async (c, next) => {
   c.header('Cache-Control', 'no-store');
 });
 
-const message = (r: PromiseSettledResult<unknown>) =>
-  r.status === 'rejected'
-    ? r.reason instanceof Error
-      ? r.reason.message
-      : String(r.reason)
-    : undefined;
+// 足りないときに案内する権限名（Fine-grained PAT / Cloudflare API トークン）
+const PERM = {
+  codespaces: 'Codespaces: Read',
+  plan: 'Plan: Read',
+  actions: 'Actions: Read（Repository permissions）',
+  builds: 'Workers Builds Configuration: Read と Workers Scripts: Read',
+} as const;
 
 api.get('/dashboard', async (c) => {
   const user = await getUser(c.env);
   const period = currentPeriod(c.env.TIMEZONE);
-  const ai = c.req.query('ai');
-  const aiProvider: AiProvider = AI_PROVIDERS.includes(ai as AiProvider)
-    ? (ai as AiProvider)
-    : 'copilot';
-  const hasClaude = claudeConfigured(c.env);
-  const claudeApi = c.req.query('claudeApi') !== '0';
-  const hasWorkers = workersConfigured(c.env);
 
-  // 1つ失敗しても他のパネルは表示できるよう個別に扱う
-  const [codespaces, runs, billing, copilot, claude, workers] =
-    await Promise.allSettled([
-      listCodespaces(c.env),
-      listRecentRuns(c.env),
-      getBillingSummary(c.env, user.login, period),
-      aiProvider === 'copilot'
-        ? getPremiumRequests(c.env, user.login, period)
-        : Promise.resolve(null),
-      aiProvider === 'claude' && hasClaude && claudeApi
-        ? getClaudeUsage(c.env, period)
-        : Promise.resolve(null),
-      hasWorkers ? getWorkersBuilds(c.env) : Promise.resolve(null),
-    ]);
-
-  const errors: DashboardResponse['errors'] = {};
-  const entries = [
-    ['codespaces', codespaces],
-    ['runs', runs],
-    ['billing', billing],
-    ['copilot', copilot],
-    ['claude', claude],
-    ['workers', workers],
-  ] as const;
-  for (const [key, r] of entries) {
-    const m = message(r);
-    if (m) {
-      errors[key] = m;
-    }
-  }
-
-  const value = <T>(r: PromiseSettledResult<T>) =>
-    r.status === 'fulfilled' ? r.value : null;
+  // 項目ごとに状態を返す（1つ失敗しても他のパネルは表示できる）
+  const [codespaces, billing, runs, copilot, builds] = await Promise.all([
+    settle(() => listCodespaces(c.env), PERM.codespaces),
+    settle(() => getBillingSummary(c.env, user.login, period), PERM.plan),
+    settle(() => listRecentRuns(c.env), PERM.actions),
+    settle(() => getPremiumRequests(c.env, user.login, period), PERM.plan),
+    workersConfigured(c.env)
+      ? settle(() => getWorkersBuilds(c.env), PERM.builds)
+      : unconfigured<never>('CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID'),
+  ]);
 
   return c.json<DashboardResponse>({
     user,
-    codespaces: value(codespaces),
-    workflowRuns: value(runs),
-    billingSummary: value(billing),
-    aiProvider,
-    premiumRequests: value(copilot),
-    claudeUsage: value(claude),
-    claudeConfigured: hasClaude,
-    workersBuilds: value(workers),
-    workersConfigured: hasWorkers,
-    errors,
+    github: { codespaces, billing, runs, copilot },
+    cloudflare: { builds },
     notifyAfterMin: numVar(c.env.NOTIFY_AFTER_MIN, 60),
     fetchedAt: new Date().toISOString(),
   });
@@ -176,7 +133,7 @@ api.onError((err, c) => {
     const status = err.status === 400 ? 400 : 502;
     return c.json<ApiErrorBody>({ error: err.message }, status);
   }
-  if (err instanceof AnthropicError || err instanceof CloudflareError) {
+  if (err instanceof CloudflareError) {
     return c.json<ApiErrorBody>({ error: err.message }, 502);
   }
   console.error(err);

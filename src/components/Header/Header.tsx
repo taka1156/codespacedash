@@ -33,7 +33,6 @@ interface Props {
   plans: ResolvedPlans;
   onChangeSettings: (patch: Partial<Settings>) => void;
   onChangeDebug: (patch: Partial<DebugSettings>) => void;
-  claudeConfigured?: boolean;
 }
 
 const PUSH_HINT: Partial<Record<PushStatus, string>> = {
@@ -116,7 +115,6 @@ export const Header = ({
   plans,
   onChangeSettings,
   onChangeDebug,
-  claudeConfigured,
 }: Props) => (
   <header className={header}>
     <div className={headerLeft}>
@@ -153,7 +151,6 @@ export const Header = ({
         plans={plans}
         onChange={onChangeSettings}
         onChangeDebug={onChangeDebug}
-        claudeConfigured={claudeConfigured}
       />
       {user && (
         <a

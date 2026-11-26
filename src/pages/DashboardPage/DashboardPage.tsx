@@ -1,28 +1,40 @@
 import { ActionsPanel } from '@/components/ActionsPanel/ActionsPanel';
-import { ClaudePanel } from '@/components/ClaudePanel/ClaudePanel';
+import { CloudflareUsagePanel } from '@/components/CloudflareUsagePanel/CloudflareUsagePanel';
 import { CodespacesPanel } from '@/components/CodespacesPanel/CodespacesPanel';
 import { CopilotPanel } from '@/components/CopilotPanel/CopilotPanel';
 import { Header } from '@/components/Header/Header';
 import { PanelTabs } from '@/components/shared/PanelTabs/PanelTabs';
 import { WorkersPanel } from '@/components/WorkersPanel/WorkersPanel';
 import { useDashboard } from '@/hooks/useDashboard';
-import { type BuildsTab, useSettings } from '@/hooks/useSettings';
+import { type ServiceTab, useSettings } from '@/hooks/useSettings';
 import { applyDebug, resolvePlans } from '@/lib/debug';
+import { CLOUDFLARE_DAILY_FREE, CLOUDFLARE_STORAGE_FREE } from '@/lib/plans';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
+import type { DashboardResponse } from '@/lib/types';
 import { buildKind } from '@/lib/workerBuildKind';
 import {
   app,
   dashboardGrid,
   errorBanner,
-  loadingGrid,
   main,
   previewBanner,
+  serviceTabs,
   skeletonPanel,
 } from './style.css';
 
+/** 反対側のタブを見ていても気づけるように、赤い点を出す条件 */
+const githubAlert = (d: DashboardResponse) =>
+  d.github.runs.status === 'ok' &&
+  d.github.runs.data.some(
+    (r) => r.status === 'completed' && r.conclusion === 'failure',
+  );
+
+const cloudflareAlert = (d: DashboardResponse) =>
+  d.cloudflare.builds.status === 'ok' &&
+  d.cloudflare.builds.data.builds.some((b) => buildKind(b) === 'failure');
+
 export const DashboardPage = () => {
   const { settings, update, updateDebug } = useSettings();
-  const { aiProvider } = settings;
   const {
     data: rawData,
     loading,
@@ -31,39 +43,11 @@ export const DashboardPage = () => {
     lastFetched,
     fetchAll,
     stopCodespace,
-  } = useDashboard(
-    aiProvider,
-    ((settings.debug.enabled && settings.debug.claudePlan) ||
-      settings.claudePlan) === 'api',
-  );
+  } = useDashboard();
 
   const data = applyDebug(rawData, settings);
   const plans = resolvePlans(settings, data);
-  const sectionErrors = data ? Object.values(data.errors) : [];
-
-  const buildsTabs = data && (
-    <PanelTabs<BuildsTab>
-      label="ビルドの表示切り替え"
-      current={settings.buildsTab}
-      onChange={(buildsTab) => update({ buildsTab })}
-      items={[
-        {
-          key: 'actions',
-          label: '⚡ Actions',
-          alert: data.workflowRuns?.some(
-            (r) => r.status === 'completed' && r.conclusion === 'failure',
-          ),
-        },
-        {
-          key: 'workers',
-          label: '☁ Workers',
-          alert: data.workersBuilds?.builds.some(
-            (b) => buildKind(b) === 'failure',
-          ),
-        },
-      ]}
-    />
-  );
+  const tab = settings.serviceTab;
 
   return (
     <div className={app}>
@@ -76,14 +60,13 @@ export const DashboardPage = () => {
         plans={plans}
         onChangeSettings={update}
         onChangeDebug={updateDebug}
-        claudeConfigured={data?.claudeConfigured}
       />
       <main className={main}>
         {IS_STATIC_PREVIEW && (
           <div className={previewBanner}>
-            静的プレビューです。表示はすべて疑似データで、GitHub や Anthropic
+            静的プレビューです。表示はすべて疑似データで、GitHub や Cloudflare
             には接続していません。右上の ⚙
-            →「デバッグ」で数値やプランを変えられます。
+            →「デバッグ」で数値やプラン、取得状態を変えられます。
           </div>
         )}
         {error && (
@@ -103,58 +86,71 @@ export const DashboardPage = () => {
             )}
           </div>
         )}
-        {sectionErrors.length > 0 && (
-          <div className={errorBanner}>
-            {sectionErrors.map((m) => (
-              <div key={m}>⚠️ {m}</div>
-            ))}
-          </div>
-        )}
-        {loading && !data && (
-          <div className={loadingGrid}>
-            {[1, 2, 3].map((i) => (
-              <div key={i} className={skeletonPanel} />
-            ))}
-          </div>
-        )}
-        {data && (
+        <PanelTabs<ServiceTab>
+          label="サービスの切り替え"
+          className={serviceTabs}
+          current={tab}
+          onChange={(serviceTab) => update({ serviceTab })}
+          items={[
+            {
+              key: 'github',
+              label: '⬡ GitHub',
+              alert: data ? githubAlert(data) : false,
+            },
+            {
+              key: 'cloudflare',
+              label: '☁ Cloudflare',
+              alert: data ? cloudflareAlert(data) : false,
+            },
+          ]}
+        />
+        {!data ? (
+          loading && (
+            <div className={dashboardGrid}>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className={skeletonPanel} />
+              ))}
+            </div>
+          )
+        ) : tab === 'github' ? (
           <div className={dashboardGrid}>
             <CodespacesPanel
-              codespaces={data.codespaces ?? []}
+              codespaces={data.github.codespaces}
               notifyAfterMin={data.notifyAfterMin}
               onStop={stopCodespace}
-              billingSummary={data.billingSummary}
+              billing={data.github.billing}
               plan={plans.github}
             />
-            {settings.buildsTab === 'workers' ? (
-              <WorkersPanel
-                summary={data.workersBuilds}
-                configured={data.workersConfigured}
-                plan={plans.workers}
-                tabs={buildsTabs}
-              />
-            ) : (
-              <ActionsPanel
-                summary={data.billingSummary}
-                runs={data.workflowRuns}
-                plan={plans.github}
-                tabs={buildsTabs}
-              />
-            )}
-            {data.aiProvider !== aiProvider && loading ? (
-              <div className={skeletonPanel} />
-            ) : aiProvider === 'claude' ? (
-              <ClaudePanel
-                usage={data.claudeUsage}
-                configured={data.claudeConfigured}
-                plan={plans.claude}
-              />
-            ) : (
-              <CopilotPanel
-                premiumRequests={data.premiumRequests}
-                plan={plans.copilot}
-              />
-            )}
+            <ActionsPanel
+              billing={data.github.billing}
+              runs={data.github.runs}
+              plan={plans.github}
+            />
+            <CopilotPanel
+              premiumRequests={data.github.copilot}
+              plan={plans.copilot}
+            />
+          </div>
+        ) : (
+          <div className={dashboardGrid}>
+            <WorkersPanel
+              builds={data.cloudflare.builds}
+              plan={plans.workers}
+            />
+            <CloudflareUsagePanel
+              title="日次の無料枠"
+              icon="◷"
+              subTitle="毎日 9:00（00:00 UTC）にリセット"
+              items={CLOUDFLARE_DAILY_FREE}
+              note="Workers Free の上限です。超えるとその日はリクエストやクエリが失敗します（Paid は超過分が従量課金）。"
+            />
+            <CloudflareUsagePanel
+              title="ストレージ・月次"
+              icon="▤"
+              subTitle="R2 は月次、D1 ストレージは総量"
+              items={CLOUDFLARE_STORAGE_FREE}
+              note="R2 の操作回数は毎月リセット。D1 ストレージはアカウント全体の合計（Free は 1 DB 500 MB まで）。"
+            />
           </div>
         )}
       </main>

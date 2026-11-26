@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { EMPTY_DEBUG, type Settings } from '@/hooks/useSettings';
 import { codespacesQuota } from './codespacesQuota';
 import { applyDebug, resolvePlans } from './debug';
-import type { BillingUsageItem, DashboardResponse } from './types';
+import { type BillingUsageItem, type DashboardResponse, okData } from './types';
 
 const item = (p: Partial<BillingUsageItem>): BillingUsageItem => ({
   product: 'codespaces',
@@ -26,27 +26,27 @@ const data = (usageItems: BillingUsageItem[]): DashboardResponse => ({
     html_url: '',
     plan: 'free',
   },
-  codespaces: [],
-  workflowRuns: [],
-  billingSummary: { timePeriod: { year: 2026, month: 11 }, usageItems },
-  aiProvider: 'copilot',
-  premiumRequests: null,
-  claudeUsage: null,
-  claudeConfigured: false,
-  workersBuilds: null,
-  workersConfigured: false,
-  errors: {},
+  github: {
+    codespaces: { status: 'ok', data: [] },
+    billing: {
+      status: 'ok',
+      data: { timePeriod: { year: 2026, month: 11 }, usageItems },
+    },
+    runs: { status: 'ok', data: [] },
+    copilot: { status: 'error', message: 'x' },
+  },
+  cloudflare: {
+    builds: { status: 'unconfigured', setting: 'CLOUDFLARE_API_TOKEN' },
+  },
   notifyAfterMin: 60,
   fetchedAt: '2026-11-26T00:00:00Z',
 });
 
 const settings = (debug: Partial<Settings['debug']>): Settings => ({
-  aiProvider: 'copilot',
   githubPlan: 'auto',
   copilotPlan: 'pro',
-  claudePlan: 'pro',
   workersPlan: 'auto',
-  buildsTab: 'actions',
+  serviceTab: 'github',
   debug: { ...EMPTY_DEBUG, enabled: true, ...debug },
 });
 
@@ -66,18 +66,18 @@ describe('applyDebug（Codespaces ストレージ）', () => {
       settings({ codespacesStorageGb: '12.5' }),
     );
     expect(
-      codespacesQuota(out?.billingSummary ?? null)?.usedStorageGbMonth,
+      codespacesQuota(okData(out?.github.billing))?.usedStorageGbMonth,
     ).toBeCloseTo(12.5);
   });
 
   it('ストレージだけ上書きしてもコア時間は実値のまま', () => {
     const out = applyDebug(data(real), settings({ codespacesStorageGb: '3' }));
-    expect(codespacesQuota(out?.billingSummary ?? null)?.usedHours).toBe(5);
+    expect(codespacesQuota(okData(out?.github.billing))?.usedHours).toBe(5);
   });
 
   it('コア時間だけ上書きしてもストレージは実値のまま', () => {
     const out = applyDebug(data(real), settings({ codespacesHours: '40' }));
-    const q = codespacesQuota(out?.billingSummary ?? null);
+    const q = codespacesQuota(okData(out?.github.billing));
     expect(q?.usedHours).toBe(40);
     expect(q?.usedStorageGbMonth).toBeCloseTo(1);
   });
@@ -91,15 +91,22 @@ describe('applyDebug（Codespaces ストレージ）', () => {
 });
 
 describe('resolvePlans（Workers）', () => {
-  const withWorkers = (detectedPlan: 'free' | 'paid' | null) => ({
+  const withWorkers = (
+    detectedPlan: 'free' | 'paid' | null,
+  ): DashboardResponse => ({
     ...data([]),
-    workersBuilds: {
-      builds: [],
-      workerCount: 1,
-      usedMinutes: 0,
-      period: { start: '', end: '' },
-      detectedPlan,
-      limitReached: false,
+    cloudflare: {
+      builds: {
+        status: 'ok',
+        data: {
+          builds: [],
+          workerCount: 1,
+          usedMinutes: 0,
+          period: { start: '', end: '' },
+          detectedPlan,
+          limitReached: false,
+        },
+      },
     },
   });
 
@@ -134,6 +141,23 @@ describe('resolvePlans（Workers）', () => {
       withWorkers('free'),
       settings({ workersMinutes: '2500' }),
     );
-    expect(out?.workersBuilds?.usedMinutes).toBe(2500);
+    expect(okData(out?.cloudflare.builds)?.usedMinutes).toBe(2500);
+  });
+});
+
+describe('applyDebug（取得状態の上書き）', () => {
+  it('権限不足にすると全項目が forbidden になり、権限名が入る', () => {
+    const out = applyDebug(data(real), settings({ sectionState: 'forbidden' }));
+    expect(out?.github.runs).toMatchObject({
+      status: 'forbidden',
+      permission: 'Actions: Read',
+    });
+    expect(out?.cloudflare.builds.status).toBe('forbidden');
+  });
+
+  it('上書きしなければ元の状態のまま', () => {
+    const out = applyDebug(data(real), settings({}));
+    expect(out?.github.copilot.status).toBe('error');
+    expect(out?.cloudflare.builds.status).toBe('unconfigured');
   });
 });

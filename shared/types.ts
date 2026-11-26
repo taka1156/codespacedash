@@ -72,35 +72,6 @@ export interface PremiumRequestUsage {
   usageItems: PremiumRequestItem[];
 }
 
-export type AiProvider = 'copilot' | 'claude';
-
-export const AI_PROVIDERS: readonly AiProvider[] = ['copilot', 'claude'];
-
-export interface ClaudeTokens {
-  input: number;
-  cacheWrite: number;
-  cacheRead: number;
-  output: number;
-}
-
-export interface ClaudeModelUsage extends ClaudeTokens {
-  model: string;
-  webSearchRequests: number;
-  costUsd: number | null;
-}
-
-export interface ClaudeDailyUsage extends ClaudeTokens {
-  date: string;
-  costUsd: number | null;
-}
-
-export interface ClaudeUsage {
-  timePeriod: { year: number; month: number };
-  models: ClaudeModelUsage[];
-  daily: ClaudeDailyUsage[];
-  totalCostUsd: number | null;
-}
-
 // Actions の実行履歴（最近 push された上位リポジトリから集約）
 export interface WorkflowRun {
   id: number;
@@ -176,25 +147,33 @@ export interface WorkersBuildsSummary {
   limitReached: boolean;
 }
 
+// ── 項目ごとの取得状態 ──
+// 取れなかったときもパネルの枠は同じまま出し、中身だけこの状態で差し替える
+
+export type SectionState<T> =
+  | { status: 'ok'; data: T }
+  /** トークンなどが未設定。setting には足りない設定名が入る */
+  | { status: 'unconfigured'; setting: string }
+  /** 401/403。permission には足りない権限名が入る */
+  | { status: 'forbidden'; permission: string; message: string }
+  | { status: 'error'; message: string };
+
+export const okData = <T>(s: SectionState<T> | undefined): T | null =>
+  s?.status === 'ok' ? s.data : null;
+
 // GET /api/dashboard
 export interface DashboardResponse {
   user: GithubUser;
-  codespaces: Codespace[] | null;
-  workflowRuns: WorkflowRun[] | null;
-  billingSummary: BillingUsageSummary | null;
-  aiProvider: AiProvider;
-  premiumRequests: PremiumRequestUsage | null;
-  claudeUsage: ClaudeUsage | null;
-  claudeConfigured: boolean;
-  workersBuilds: WorkersBuildsSummary | null;
-  workersConfigured: boolean;
-  // 取得に失敗したセクションだけメッセージが入る（他のセクションは表示を続ける）
-  errors: Partial<
-    Record<
-      'codespaces' | 'runs' | 'billing' | 'copilot' | 'claude' | 'workers',
-      string
-    >
-  >;
+  github: {
+    codespaces: SectionState<Codespace[]>;
+    /** Codespaces・Actions の使用量（Billing API） */
+    billing: SectionState<BillingUsageSummary>;
+    runs: SectionState<WorkflowRun[]>;
+    copilot: SectionState<PremiumRequestUsage>;
+  };
+  cloudflare: {
+    builds: SectionState<WorkersBuildsSummary>;
+  };
   notifyAfterMin: number;
   fetchedAt: string;
 }

@@ -2,7 +2,6 @@ export interface Env {
   // ── Secrets（wrangler secret put / ローカルは .dev.vars）──
   /** Fine-grained PAT。ブラウザには一切渡さない */
   GITHUB_TOKEN: string;
-  ANTHROPIC_ADMIN_KEY?: string;
   /** VAPID 秘密鍵（JWK を JSON 文字列のまま） */
   VAPID_PRIVATE_JWK?: string;
   /** Workers Builds 用。ユーザー単位の API トークン（アカウント単位は Builds API が受け付けない） */

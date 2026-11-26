@@ -2,9 +2,11 @@ import clsx from 'clsx';
 import { useState } from 'react';
 import { codespacesQuota } from '@/lib/codespacesQuota';
 import { GITHUB_PLANS, type GithubPlan } from '@/lib/plans';
-import type { BillingUsageSummary, Codespace } from '@/lib/types';
+import { statusText } from '@/lib/sectionStatus';
+import type { BillingUsageSummary, Codespace, SectionState } from '@/lib/types';
 import { BasePanel } from '../shared/BasePanel/BasePanel';
 import { QuotaBar } from '../shared/QuotaBar/QuotaBar';
+import { StatusNote } from '../shared/StatusNote/StatusNote';
 import {
   csActions,
   csBtn,
@@ -125,34 +127,56 @@ const fmtUntil = (s: string | null) => {
 };
 
 interface Props {
-  codespaces: Codespace[];
+  codespaces: SectionState<Codespace[]>;
   notifyAfterMin: number;
   onStop: (name: string) => Promise<void>;
-  billingSummary: BillingUsageSummary | null;
+  billing: SectionState<BillingUsageSummary>;
   plan: GithubPlan;
 }
 
 const Quota = ({
-  summary,
+  billing,
   plan,
 }: {
-  summary: BillingUsageSummary | null;
+  billing: SectionState<BillingUsageSummary>;
   plan: GithubPlan;
 }) => {
-  const q = codespacesQuota(summary, plan);
-  if (!q) {
-    return null;
+  const q = codespacesQuota(
+    billing.status === 'ok' ? billing.data : null,
+    plan,
+  );
+  const { label } = GITHUB_PLANS[plan];
+  const hours = `${label} の無料枠（2コア換算）`;
+  const storage = `${label} のストレージ枠（停止中も加算）`;
+  if (billing.status !== 'ok' || !q) {
+    const why = billing.status === 'ok' ? '取得失敗' : statusText(billing);
+    return (
+      <div className={quotaBox}>
+        <QuotaBar
+          label={hours}
+          free={GITHUB_PLANS[plan].codespacesCoreHours}
+          unit="時間"
+          unavailable={why}
+        />
+        <QuotaBar
+          label={storage}
+          free={GITHUB_PLANS[plan].codespacesStorageGbMonth}
+          unit="GB-月"
+          unavailable={why}
+        />
+      </div>
+    );
   }
   return (
     <div className={quotaBox}>
       <QuotaBar
-        label={`${GITHUB_PLANS[plan].label} の無料枠（2コア換算）`}
+        label={hours}
         used={q.usedHours}
         free={q.freeHours}
         unit="時間"
       />
       <QuotaBar
-        label={`${GITHUB_PLANS[plan].label} のストレージ枠（停止中も加算）`}
+        label={storage}
         used={q.usedStorageGbMonth}
         free={q.freeStorageGbMonth}
         unit="GB-月"
@@ -162,15 +186,24 @@ const Quota = ({
 };
 
 export const CodespacesPanel = ({
-  codespaces,
+  codespaces: state,
   notifyAfterMin,
   onStop,
-  billingSummary,
+  billing,
   plan,
 }: Props) => {
   const [stopping, setStopping] = useState<string | null>(null);
   const [stopError, setStopError] = useState<string | null>(null);
 
+  if (state.status !== 'ok') {
+    return (
+      <BasePanel title="Codespaces" icon="⬡" subTitle="—">
+        <Quota billing={billing} plan={plan} />
+        <StatusNote state={state} what="Codespaces の一覧" />
+      </BasePanel>
+    );
+  }
+  const codespaces = state.data;
   const running = codespaces.filter((c) => c.state === 'Available').length;
   const total = codespaces.length;
   const subTitle = `${running} 稼働中 / ${total} 合計`;
@@ -193,7 +226,7 @@ export const CodespacesPanel = ({
   if (total === 0) {
     return (
       <BasePanel title="Codespaces" icon="⬡" subTitle={subTitle} badgeText="0">
-        <Quota summary={billingSummary} plan={plan} />
+        <Quota billing={billing} plan={plan} />
         <div className={emptyState}>
           コードスペースはありません 🎉
           <br />
@@ -220,7 +253,7 @@ export const CodespacesPanel = ({
       subTitle={subTitle}
       badgeText={`${total}`}
     >
-      <Quota summary={billingSummary} plan={plan} />
+      <Quota billing={billing} plan={plan} />
       {stopError && <p className={csWarn}>⚠️ {stopError}</p>}
       <div className={csList}>
         {sorted.map((cs) => {

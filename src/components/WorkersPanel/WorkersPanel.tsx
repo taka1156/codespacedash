@@ -1,6 +1,11 @@
 import clsx from 'clsx';
 import { WORKERS_PLANS, type WorkersPlan } from '@/lib/plans';
-import type { WorkerBuild, WorkersBuildsSummary } from '@/lib/types';
+import { statusText } from '@/lib/sectionStatus';
+import type {
+  SectionState,
+  WorkerBuild,
+  WorkersBuildsSummary,
+} from '@/lib/types';
 import { type BuildKind, buildKind } from '@/lib/workerBuildKind';
 import {
   icon,
@@ -22,6 +27,7 @@ import {
 } from '../ActionsPanel/runHistory.css';
 import { BasePanel } from '../shared/BasePanel/BasePanel';
 import { QuotaBar } from '../shared/QuotaBar/QuotaBar';
+import { StatusNote } from '../shared/StatusNote/StatusNote';
 import { emptyState, hash, quotaNote, quotaWrap, warn } from './style.css';
 
 const ICON: Record<BuildKind, { cls: string; char: string; label: string }> = {
@@ -67,13 +73,12 @@ const fmtDate = (iso: string) =>
   });
 
 interface Props {
-  summary: WorkersBuildsSummary | null;
-  configured: boolean;
+  builds: SectionState<WorkersBuildsSummary>;
   plan: WorkersPlan;
-  tabs?: React.ReactNode;
 }
 
-export const WorkersPanel = ({ summary, configured, plan, tabs }: Props) => {
+export const WorkersPanel = ({ builds: state, plan }: Props) => {
+  const summary = state.status === 'ok' ? state.data : null;
   const limit = WORKERS_PLANS[plan].buildMinutes;
   const builds = summary?.builds ?? [];
   const failed = builds.filter((b) => buildKind(b) === 'failure').length;
@@ -106,21 +111,22 @@ export const WorkersPanel = ({ summary, configured, plan, tabs }: Props) => {
       badgeText={
         summary ? `${summary.usedMinutes.toLocaleString()} 分` : undefined
       }
-      tabs={tabs}
     >
-      {!configured ? (
-        <div className={emptyState}>
-          Workers Builds は未設定です
-          <br />
-          <small>
-            Worker のシークレットに <code>CLOUDFLARE_API_TOKEN</code>
-            （ユーザー単位のトークン）と <code>CLOUDFLARE_ACCOUNT_ID</code>{' '}
-            を追加してください
-          </small>
-        </div>
-      ) : !summary ? (
-        <div className={emptyState}>ビルド情報を取得できませんでした</div>
-      ) : (
+      {state.status !== 'ok' ? (
+        <>
+          <div className={quotaWrap}>
+            <QuotaBar
+              label={`${WORKERS_PLANS[plan].label} のビルド時間`}
+              free={limit}
+              unit="分"
+              unavailable={statusText(state)}
+            />
+          </div>
+          <div className={section}>
+            <StatusNote state={state} what="Workers Builds" />
+          </div>
+        </>
+      ) : !summary ? null : (
         <>
           <div className={quotaWrap}>
             <QuotaBar

@@ -1,7 +1,5 @@
 import { useCallback, useState } from 'react';
 import {
-  CLAUDE_PLAN_KEYS,
-  type ClaudePlan,
   COPILOT_PLAN_KEYS,
   type CopilotPlan,
   GITHUB_PLAN_KEYS,
@@ -10,53 +8,54 @@ import {
   type WorkersPlan,
 } from '@/lib/plans';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
-import type { AiProvider } from '@/lib/types';
-import { AI_PROVIDERS } from '../../shared/types';
 
 const KEY = 'codespacedash:settings';
 
-/** Actions / Workers パネルのどちらを表示するか */
-export type BuildsTab = 'actions' | 'workers';
-const BUILDS_TABS: readonly BuildsTab[] = ['actions', 'workers'];
+/** GitHub / Cloudflare のどちらのタブを表示するか */
+export type ServiceTab = 'github' | 'cloudflare';
+const SERVICE_TABS: readonly ServiceTab[] = ['github', 'cloudflare'];
+
+/** デバッグ：全項目を「取れなかった」状態にして見た目を確かめる */
+export type DebugSectionState = '' | 'unconfigured' | 'forbidden' | 'error';
+export const DEBUG_SECTION_STATES: readonly DebugSectionState[] = [
+  '',
+  'unconfigured',
+  'forbidden',
+  'error',
+];
 
 export interface DebugSettings {
   enabled: boolean;
+  sectionState: DebugSectionState;
   githubPlan: GithubPlan | '';
   copilotPlan: CopilotPlan | '';
-  claudePlan: ClaudePlan | '';
   workersPlan: WorkersPlan | '';
   codespacesHours: string;
   codespacesStorageGb: string;
   actionsMinutes: string;
   workersMinutes: string;
   copilotUsd: string;
-  claudeUsd: string;
-  claudeTokensM: string;
 }
 
 export interface Settings {
-  aiProvider: AiProvider;
   githubPlan: GithubPlan | 'auto';
   copilotPlan: CopilotPlan;
-  claudePlan: ClaudePlan;
   workersPlan: WorkersPlan | 'auto';
-  buildsTab: BuildsTab;
+  serviceTab: ServiceTab;
   debug: DebugSettings;
 }
 
 export const EMPTY_DEBUG: DebugSettings = {
   enabled: false,
+  sectionState: '',
   githubPlan: '',
   copilotPlan: '',
-  claudePlan: '',
   workersPlan: '',
   codespacesHours: '',
   codespacesStorageGb: '',
   actionsMinutes: '',
   workersMinutes: '',
   copilotUsd: '',
-  claudeUsd: '',
-  claudeTokensM: '',
 };
 
 export const SAMPLE_DEBUG: Partial<DebugSettings> = {
@@ -65,17 +64,13 @@ export const SAMPLE_DEBUG: Partial<DebugSettings> = {
   actionsMinutes: '1650',
   workersMinutes: '1280',
   copilotUsd: '7.4',
-  claudeUsd: '63.2',
-  claudeTokensM: '182',
 };
 
 const DEFAULTS: Settings = {
-  aiProvider: 'copilot',
   githubPlan: 'auto',
   copilotPlan: 'pro',
-  claudePlan: 'pro',
   workersPlan: 'auto',
-  buildsTab: 'actions',
+  serviceTab: 'github',
   debug: IS_STATIC_PREVIEW
     ? { ...EMPTY_DEBUG, ...SAMPLE_DEBUG, enabled: true }
     : EMPTY_DEBUG,
@@ -98,7 +93,6 @@ const load = (): Settings => {
     const raw = JSON.parse(stored) as Record<string, unknown>;
     const d = (raw.debug ?? {}) as Record<string, unknown>;
     return {
-      aiProvider: pick(raw.aiProvider, AI_PROVIDERS, DEFAULTS.aiProvider),
       githubPlan: pick<GithubPlan | 'auto'>(
         raw.githubPlan,
         ['auto', ...GITHUB_PLAN_KEYS],
@@ -109,15 +103,16 @@ const load = (): Settings => {
         COPILOT_PLAN_KEYS,
         DEFAULTS.copilotPlan,
       ),
-      claudePlan: pick(raw.claudePlan, CLAUDE_PLAN_KEYS, DEFAULTS.claudePlan),
       workersPlan: pick<WorkersPlan | 'auto'>(
         raw.workersPlan,
         ['auto', ...WORKERS_PLAN_KEYS],
         DEFAULTS.workersPlan,
       ),
-      buildsTab: pick(raw.buildsTab, BUILDS_TABS, DEFAULTS.buildsTab),
+      // 古い版の aiProvider / claudePlan / buildsTab は読まずに捨てる
+      serviceTab: pick(raw.serviceTab, SERVICE_TABS, DEFAULTS.serviceTab),
       debug: {
         enabled: IS_STATIC_PREVIEW || d.enabled === true,
+        sectionState: pick(d.sectionState, DEBUG_SECTION_STATES, ''),
         githubPlan: pick<GithubPlan | ''>(
           d.githubPlan,
           ['', ...GITHUB_PLAN_KEYS],
@@ -126,11 +121,6 @@ const load = (): Settings => {
         copilotPlan: pick<CopilotPlan | ''>(
           d.copilotPlan,
           ['', ...COPILOT_PLAN_KEYS],
-          '',
-        ),
-        claudePlan: pick<ClaudePlan | ''>(
-          d.claudePlan,
-          ['', ...CLAUDE_PLAN_KEYS],
           '',
         ),
         workersPlan: pick<WorkersPlan | ''>(
@@ -143,8 +133,6 @@ const load = (): Settings => {
         actionsMinutes: str(d.actionsMinutes),
         workersMinutes: str(d.workersMinutes),
         copilotUsd: str(d.copilotUsd),
-        claudeUsd: str(d.claudeUsd),
-        claudeTokensM: str(d.claudeTokensM),
       },
     };
   } catch {

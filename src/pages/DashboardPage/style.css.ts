@@ -1,4 +1,8 @@
 import { keyframes, style } from '@vanilla-extract/css';
+import {
+  DESKTOP_MEDIA,
+  PANEL_HEIGHT,
+} from '@/components/shared/BasePanel/style.css';
 
 export const app = style({
   display: 'flex',
@@ -19,22 +23,21 @@ export const main = style({
   },
 });
 
+// PC は3列固定、それ以外は1列。2列だと3枚目が1枚だけ余るので作らない
 export const dashboardGrid = style({
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))',
+  gridTemplateColumns: 'minmax(0, 1fr)',
   gap: 20,
-  alignItems: 'start',
   '@media': {
-    '(max-width: 600px)': {
-      gridTemplateColumns: '1fr',
+    [DESKTOP_MEDIA]: {
+      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     },
   },
 });
 
-export const loadingGrid = style({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))',
-  gap: 20,
+export const serviceTabs = style({
+  maxWidth: 360,
+  marginBottom: 20,
 });
 
 export const errorBanner = style({
@@ -58,6 +61,11 @@ const shimmer = keyframes({
 
 export const skeletonPanel = style({
   height: 200,
+  '@media': {
+    [DESKTOP_MEDIA]: {
+      height: PANEL_HEIGHT,
+    },
+  },
   background: 'var(--bg-panel)',
   border: '1px solid var(--border)',
   borderRadius: 'var(--radius)',

@@ -32,24 +32,41 @@ export const COPILOT_PLANS = {
 >;
 export type CopilotPlan = keyof typeof COPILOT_PLANS;
 
-export const CLAUDE_PLANS = {
-  pro: { label: 'Claude Pro', monthlyUsd: 20, multiplier: 1 },
-  max5x: { label: 'Claude Max 5x', monthlyUsd: 100, multiplier: 5 },
-  max20x: { label: 'Claude Max 20x', monthlyUsd: 200, multiplier: 20 },
-  api: { label: 'API 従量課金', monthlyUsd: null, multiplier: null },
-} as const satisfies Record<
-  string,
-  { label: string; monthlyUsd: number | null; multiplier: number | null }
->;
+/**
+ * Cloudflare の無料枠（Workers Free）。日次はすべて 00:00 UTC にリセット
+ * https://developers.cloudflare.com/workers/platform/pricing/
+ */
+export const CLOUDFLARE_DAILY_FREE = [
+  {
+    key: 'workersRequests',
+    label: 'Workers リクエスト',
+    free: 100_000,
+    unit: '回',
+  },
+  {
+    key: 'workersAiNeurons',
+    label: 'Workers AI',
+    free: 10_000,
+    unit: 'Neurons',
+  },
+  { key: 'd1RowsRead', label: 'D1 読み取り', free: 5_000_000, unit: '行' },
+  { key: 'd1RowsWritten', label: 'D1 書き込み', free: 100_000, unit: '行' },
+  { key: 'kvReads', label: 'KV 読み取り', free: 100_000, unit: '回' },
+  { key: 'kvWrites', label: 'KV 書き込み', free: 1_000, unit: '回' },
+] as const;
 
-export const CLAUDE_USAGE_URL = 'https://claude.ai/settings/usage';
-export type ClaudePlan = keyof typeof CLAUDE_PLANS;
+/** 月次（R2）と総量（D1 ストレージ）の無料枠 */
+export const CLOUDFLARE_STORAGE_FREE = [
+  { key: 'r2StorageGb', label: 'R2 ストレージ', free: 10, unit: 'GB-月' },
+  { key: 'r2ClassA', label: 'R2 Class A 操作', free: 1_000_000, unit: '回' },
+  { key: 'r2ClassB', label: 'R2 Class B 操作', free: 10_000_000, unit: '回' },
+  { key: 'd1StorageGb', label: 'D1 ストレージ', free: 5, unit: 'GB' },
+] as const;
 
 const keys = <T extends object>(o: T) => Object.keys(o) as (keyof T)[];
 export const GITHUB_PLAN_KEYS = keys(GITHUB_PLANS);
 export const WORKERS_PLAN_KEYS = keys(WORKERS_PLANS);
 export const COPILOT_PLAN_KEYS = keys(COPILOT_PLANS);
-export const CLAUDE_PLAN_KEYS = keys(CLAUDE_PLANS);
 
 export const githubPlanFromApi = (
   name: string | null | undefined,

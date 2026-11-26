@@ -1,5 +1,6 @@
 import clsx from 'clsx';
-import type { WorkflowRun } from '@/lib/types';
+import type { SectionState, WorkflowRun } from '@/lib/types';
+import { StatusNote } from '../shared/StatusNote/StatusNote';
 import {
   emptyState,
   icon,
@@ -87,12 +88,12 @@ const fmtDuration = (r: WorkflowRun) => {
 };
 
 interface Props {
-  runs: WorkflowRun[] | null;
+  runs: SectionState<WorkflowRun[]>;
 }
 
 /** Actions パネルの下半分：直近の実行履歴 */
 export const RunHistory = ({ runs }: Props) => {
-  const list = runs ?? [];
+  const list = runs.status === 'ok' ? runs.data : [];
   const failed = list.filter((r) => kindOf(r) === 'failure').length;
   const running = list.filter((r) =>
     ['running', 'queued'].includes(kindOf(r)),
@@ -110,14 +111,8 @@ export const RunHistory = ({ runs }: Props) => {
         実行履歴{counts ? ` · ${counts}` : ''}
         <span className={sectionNote}>最近pushした15リポジトリ</span>
       </p>
-      {runs === null ? (
-        <div className={emptyState}>
-          データを取得できませんでした
-          <br />
-          <small>
-            GITHUB_TOKEN に <code>Actions (read)</code> 権限が必要です
-          </small>
-        </div>
+      {runs.status !== 'ok' ? (
+        <StatusNote state={runs} what="実行履歴" />
       ) : list.length === 0 ? (
         <div className={emptyState}>最近の実行はありません</div>
       ) : (

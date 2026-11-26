@@ -53,15 +53,10 @@ const cf = async <T>(env: Env, path: string): Promise<Envelope<T>> => {
     if (detail) {
       message += `: ${detail}`;
     }
-    if (
-      res.status === 401 ||
-      res.status === 403 ||
-      /token/i.test(detail ?? '')
-    ) {
-      message +=
-        '（CLOUDFLARE_API_TOKEN はユーザー単位のトークンで、Workers Builds Configuration と Workers Scripts の読み取り権限が必要です）';
-    }
-    throw new CloudflareError(res.status, message);
+    // 「Invalid token」は 400 で返ることもあるので、権限不足（403）として扱う
+    const forbidden =
+      res.status === 401 || res.status === 403 || /token/i.test(detail ?? '');
+    throw new CloudflareError(forbidden ? 403 : res.status, message);
   }
   return body;
 };

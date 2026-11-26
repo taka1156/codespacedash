@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, SessionExpiredError } from '@/lib/api';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
-import type { AiProvider, DashboardResponse } from '@/lib/types';
+import type { DashboardResponse } from '@/lib/types';
 
 const REFRESH_MS = 60_000;
 
@@ -15,16 +15,13 @@ const setAppBadge = (count: number) => {
   p?.catch(() => {});
 };
 
-export const useDashboard = (aiProvider: AiProvider, claudeApi: boolean) => {
+export const useDashboard = () => {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
   const inFlight = useRef(false);
   const pending = useRef(false);
-  const query = `ai=${aiProvider}${aiProvider === 'claude' && !claudeApi ? '&claudeApi=0' : ''}`;
-  const queryRef = useRef(query);
-  queryRef.current = query;
 
   const fetchAll = useCallback(async () => {
     if (IS_STATIC_PREVIEW) {
@@ -40,9 +37,7 @@ export const useDashboard = (aiProvider: AiProvider, claudeApi: boolean) => {
     try {
       do {
         pending.current = false;
-        setData(
-          await api.get<DashboardResponse>(`/dashboard?${queryRef.current}`),
-        );
+        setData(await api.get<DashboardResponse>('/dashboard'));
       } while (pending.current);
     } catch (e) {
       if (e instanceof SessionExpiredError) {
@@ -68,10 +63,9 @@ export const useDashboard = (aiProvider: AiProvider, claudeApi: boolean) => {
     [fetchAll],
   );
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: query の変更で取り直す
   useEffect(() => {
     fetchAll();
-  }, [fetchAll, query]);
+  }, [fetchAll]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -93,15 +87,17 @@ export const useDashboard = (aiProvider: AiProvider, claudeApi: boolean) => {
 
   // タブのタイトルに稼働中の台数、アプリアイコンのバッジにつけっぱなしの台数を出す
   useEffect(() => {
-    if (!data?.codespaces) {
+    const codespaces =
+      data?.github.codespaces.status === 'ok'
+        ? data.github.codespaces.data
+        : null;
+    if (!data || !codespaces) {
       return;
     }
-    const running = data.codespaces.filter(
-      (c) => c.state === 'Available',
-    ).length;
+    const running = codespaces.filter((c) => c.state === 'Available').length;
     document.title = running ? `(${running}) CodespaceDash` : 'CodespaceDash';
 
-    const forgotten = data.codespaces.filter(
+    const forgotten = codespaces.filter(
       (c) =>
         c.state === 'Available' &&
         c.last_used_at &&

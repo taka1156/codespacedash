@@ -1,6 +1,8 @@
 import clsx from 'clsx';
 import { useEffect, useId, useRef, useState } from 'react';
 import {
+  DEBUG_SECTION_STATES,
+  type DebugSectionState,
   type DebugSettings,
   EMPTY_DEBUG,
   SAMPLE_DEBUG,
@@ -8,8 +10,6 @@ import {
 } from '@/hooks/useSettings';
 import type { ResolvedPlans } from '@/lib/debug';
 import {
-  CLAUDE_PLAN_KEYS,
-  CLAUDE_PLANS,
   COPILOT_PLAN_KEYS,
   COPILOT_PLANS,
   GITHUB_PLAN_KEYS,
@@ -18,18 +18,12 @@ import {
   WORKERS_PLANS,
 } from '@/lib/plans';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
-import type { AiProvider } from '@/lib/types';
 import {
   actions,
   control,
-  fieldset,
   group,
   legend,
-  option,
-  optionDesc,
-  optionName,
   popover,
-  radio,
   row,
   rowHint,
   scroll,
@@ -39,7 +33,6 @@ import {
   tabDebugOn,
   tabs,
   trigger,
-  warn,
   wrap,
 } from './style.css';
 
@@ -48,30 +41,16 @@ interface Props {
   plans: ResolvedPlans;
   onChange: (patch: Partial<Settings>) => void;
   onChangeDebug: (patch: Partial<DebugSettings>) => void;
-  claudeConfigured?: boolean;
 }
 
-const AI_OPTIONS: {
-  value: AiProvider;
-  name: string;
-  desc: string;
-  accent: [string, string];
-}[] = [
-  {
-    value: 'copilot',
-    name: '✦ Copilot',
-    desc: 'GitHub Copilot の AI Credits（GITHUB_TOKEN）',
-    accent: ['var(--cyan)', 'var(--cyan-dim)'],
-  },
-  {
-    value: 'claude',
-    name: '✳ Claude',
-    desc: 'Claude API のトークン・コスト（ANTHROPIC_ADMIN_KEY）',
-    accent: ['var(--claude)', 'var(--claude-dim)'],
-  },
-];
-
 type Tab = 'general' | 'debug';
+
+const STATE_LABEL: Record<DebugSectionState, string> = {
+  '': '実データどおり',
+  unconfigured: '未設定',
+  forbidden: '権限不足',
+  error: '取得エラー',
+};
 
 const NumberRow = ({
   label,
@@ -148,45 +127,8 @@ const GeneralTab = ({
   settings,
   plans,
   onChange,
-  claudeConfigured,
 }: Omit<Props, 'onChangeDebug'>) => (
   <>
-    <fieldset className={fieldset}>
-      <legend className={legend}>AIパネルに表示する</legend>
-      {AI_OPTIONS.map((o) => (
-        <label
-          key={o.value}
-          className={option}
-          style={
-            {
-              '--accent': o.accent[0],
-              '--accent-dim': o.accent[1],
-            } as React.CSSProperties
-          }
-        >
-          <input
-            type="radio"
-            name="aiProvider"
-            className={radio}
-            value={o.value}
-            checked={settings.aiProvider === o.value}
-            onChange={() => onChange({ aiProvider: o.value })}
-          />
-          <span>
-            <span className={optionName}>{o.name}</span>
-            <span className={optionDesc}>
-              {o.desc}
-              {o.value === 'claude' && claudeConfigured === false && (
-                <span className={warn}>
-                  <br />⚠ Worker にキーが未設定です
-                </span>
-              )}
-            </span>
-          </span>
-        </label>
-      ))}
-    </fieldset>
-
     <div className={group}>
       <p className={legend}>契約プラン（無料枠・上限の計算に使う）</p>
       <SelectRow
@@ -233,16 +175,6 @@ const GeneralTab = ({
         }))}
         onChange={(v) => onChange({ copilotPlan: v })}
       />
-      <SelectRow
-        label="Claude"
-        hint="API で取れないので手動"
-        value={settings.claudePlan}
-        options={CLAUDE_PLAN_KEYS.map((k) => ({
-          value: k,
-          label: CLAUDE_PLANS[k].label,
-        }))}
-        onChange={(v) => onChange({ claudePlan: v })}
-      />
     </div>
   </>
 );
@@ -272,6 +204,20 @@ const DebugTab = ({
           onChange={(e) => onChangeDebug({ enabled: e.target.checked })}
         />
       </label>
+
+      <fieldset className={group} disabled={!on}>
+        <p className={legend}>取得状態を上書き</p>
+        <SelectRow<DebugSectionState>
+          label="全項目"
+          hint="取れなかったときの表示を確認する"
+          value={debug.sectionState}
+          options={DEBUG_SECTION_STATES.map((v) => ({
+            value: v,
+            label: STATE_LABEL[v],
+          }))}
+          onChange={(v) => onChangeDebug({ sectionState: v })}
+        />
+      </fieldset>
 
       <fieldset className={group} disabled={!on}>
         <p className={legend}>プランを上書き</p>
@@ -310,18 +256,6 @@ const DebugTab = ({
             })),
           ]}
           onChange={(v) => onChangeDebug({ copilotPlan: v })}
-        />
-        <SelectRow
-          label="Claude"
-          value={debug.claudePlan}
-          options={[
-            fallback,
-            ...CLAUDE_PLAN_KEYS.map((k) => ({
-              value: k,
-              label: CLAUDE_PLANS[k].label,
-            })),
-          ]}
-          onChange={(v) => onChangeDebug({ claudePlan: v })}
         />
       </fieldset>
 
@@ -362,18 +296,6 @@ const DebugTab = ({
           hint="AI Credits 使用額（USD）"
           value={debug.copilotUsd}
           onChange={(v) => onChangeDebug({ copilotUsd: v })}
-        />
-        <NumberRow
-          label="Claude コスト"
-          hint="USD（APIプランのみ）"
-          value={debug.claudeUsd}
-          onChange={(v) => onChangeDebug({ claudeUsd: v })}
-        />
-        <NumberRow
-          label="Claude トークン"
-          hint="百万（APIプランのみ）"
-          value={debug.claudeTokensM}
-          onChange={(v) => onChangeDebug({ claudeTokensM: v })}
         />
         <div className={actions}>
           <button
