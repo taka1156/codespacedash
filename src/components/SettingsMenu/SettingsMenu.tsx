@@ -307,6 +307,12 @@ const DebugTab = ({
           onChange={(v) => onChangeDebug({ codespacesHours: v })}
         />
         <NumberRow
+          label="Codespaces ストレージ"
+          hint="GB-月"
+          value={debug.codespacesStorageGb}
+          onChange={(v) => onChangeDebug({ codespacesStorageGb: v })}
+        />
+        <NumberRow
           label="Actions"
           hint="Linux換算の分"
           step="1"

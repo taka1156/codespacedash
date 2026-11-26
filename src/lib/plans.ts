@@ -2,9 +2,16 @@ export const GITHUB_PLANS = {
   free: {
     label: 'GitHub Free',
     codespacesCoreHours: 120,
+    /** Codespaces ストレージの無料枠（GB-月）。停止中の Codespace とプレビルドも含む */
+    codespacesStorageGbMonth: 15,
     actionsMinutes: 2000,
   },
-  pro: { label: 'GitHub Pro', codespacesCoreHours: 180, actionsMinutes: 3000 },
+  pro: {
+    label: 'GitHub Pro',
+    codespacesCoreHours: 180,
+    codespacesStorageGbMonth: 20,
+    actionsMinutes: 3000,
+  },
 } as const;
 export type GithubPlan = keyof typeof GITHUB_PLANS;
 

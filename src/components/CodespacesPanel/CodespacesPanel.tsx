@@ -151,6 +151,12 @@ const Quota = ({
         free={q.freeHours}
         unit="時間"
       />
+      <QuotaBar
+        label={`${GITHUB_PLANS[plan].label} のストレージ枠（停止中も加算）`}
+        used={q.usedStorageGbMonth}
+        free={q.freeStorageGbMonth}
+        unit="GB-月"
+      />
     </div>
   );
 };
