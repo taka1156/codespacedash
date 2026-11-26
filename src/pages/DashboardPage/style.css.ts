@@ -19,17 +19,40 @@ export const main = style({
   },
 });
 
+// パネルの最小幅 420px・間隔 20px・main の左右余白 28px から決めた切り替え幅
+const TWO_COLUMNS = '(min-width: 916px)';
+const THREE_COLUMNS = '(min-width: 1356px)';
+
+/**
+ * 1列: Codespaces → Actions/Workers → AI
+ * 2列（タブレット）: 左に Codespaces と AI を縦に詰め、右に背の高い Actions/Workers。
+ *   1行目を Codespaces の高さ（auto）、2行目を残り（1fr）にすることで、
+ *   右の背の高いパネルにつられて Codespaces の下に空白ができないようにする
+ * 3列: 横に3つ並べる
+ */
 export const dashboardGrid = style({
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))',
   gap: 20,
   alignItems: 'start',
+  gridTemplateColumns: 'minmax(0, 1fr)',
+  gridTemplateAreas: '"cs" "builds" "ai"',
   '@media': {
-    '(max-width: 600px)': {
-      gridTemplateColumns: '1fr',
+    [TWO_COLUMNS]: {
+      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+      gridTemplateRows: 'auto 1fr',
+      gridTemplateAreas: '"cs builds" "ai builds"',
+    },
+    [THREE_COLUMNS]: {
+      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+      gridTemplateRows: 'auto',
+      gridTemplateAreas: '"cs builds ai"',
     },
   },
 });
+
+export const areaCs = style({ gridArea: 'cs', minWidth: 0 });
+export const areaBuilds = style({ gridArea: 'builds', minWidth: 0 });
+export const areaAi = style({ gridArea: 'ai', minWidth: 0 });
 
 export const loadingGrid = style({
   display: 'grid',

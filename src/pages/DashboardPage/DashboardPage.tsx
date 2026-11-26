@@ -12,6 +12,9 @@ import { IS_STATIC_PREVIEW } from '@/lib/preview';
 import { buildKind } from '@/lib/workerBuildKind';
 import {
   app,
+  areaAi,
+  areaBuilds,
+  areaCs,
   dashboardGrid,
   errorBanner,
   loadingGrid,
@@ -119,42 +122,48 @@ export const DashboardPage = () => {
         )}
         {data && (
           <div className={dashboardGrid}>
-            <CodespacesPanel
-              codespaces={data.codespaces ?? []}
-              notifyAfterMin={data.notifyAfterMin}
-              onStop={stopCodespace}
-              billingSummary={data.billingSummary}
-              plan={plans.github}
-            />
-            {settings.buildsTab === 'workers' ? (
-              <WorkersPanel
-                summary={data.workersBuilds}
-                configured={data.workersConfigured}
-                plan={plans.workers}
-                tabs={buildsTabs}
-              />
-            ) : (
-              <ActionsPanel
-                summary={data.billingSummary}
-                runs={data.workflowRuns}
+            <div className={areaCs}>
+              <CodespacesPanel
+                codespaces={data.codespaces ?? []}
+                notifyAfterMin={data.notifyAfterMin}
+                onStop={stopCodespace}
+                billingSummary={data.billingSummary}
                 plan={plans.github}
-                tabs={buildsTabs}
               />
-            )}
-            {data.aiProvider !== aiProvider && loading ? (
-              <div className={skeletonPanel} />
-            ) : aiProvider === 'claude' ? (
-              <ClaudePanel
-                usage={data.claudeUsage}
-                configured={data.claudeConfigured}
-                plan={plans.claude}
-              />
-            ) : (
-              <CopilotPanel
-                premiumRequests={data.premiumRequests}
-                plan={plans.copilot}
-              />
-            )}
+            </div>
+            <div className={areaBuilds}>
+              {settings.buildsTab === 'workers' ? (
+                <WorkersPanel
+                  summary={data.workersBuilds}
+                  configured={data.workersConfigured}
+                  plan={plans.workers}
+                  tabs={buildsTabs}
+                />
+              ) : (
+                <ActionsPanel
+                  summary={data.billingSummary}
+                  runs={data.workflowRuns}
+                  plan={plans.github}
+                  tabs={buildsTabs}
+                />
+              )}
+            </div>
+            <div className={areaAi}>
+              {data.aiProvider !== aiProvider && loading ? (
+                <div className={skeletonPanel} />
+              ) : aiProvider === 'claude' ? (
+                <ClaudePanel
+                  usage={data.claudeUsage}
+                  configured={data.claudeConfigured}
+                  plan={plans.claude}
+                />
+              ) : (
+                <CopilotPanel
+                  premiumRequests={data.premiumRequests}
+                  plan={plans.copilot}
+                />
+              )}
+            </div>
           </div>
         )}
       </main>
