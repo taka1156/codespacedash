@@ -64,6 +64,22 @@ describe('codespacesQuota', () => {
       expect(q?.usedStorageGbMonth).toBeCloseTo(1);
     });
 
+    it('月が分からないときは 1年の平均（730時間）で割る', () => {
+      const q = codespacesQuota(
+        summary(
+          [
+            item({
+              sku: 'codespaces_storage',
+              unitType: 'GigabyteHours',
+              grossQuantity: 730,
+            }),
+          ],
+          { year: 2026 },
+        ),
+      );
+      expect(q?.usedStorageGbMonth).toBeCloseTo(1);
+    });
+
     it('プレビルドのストレージも合算する', () => {
       const q = codespacesQuota(
         summary([

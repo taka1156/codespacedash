@@ -12,10 +12,13 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('push', (event) => {
   let data = {};
-  try {
-    data = event.data ? event.data.json() : {};
-  } catch {
-    data = { body: event.data ? event.data.text() : '' };
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch {
+      // JSON でなければ本文として出す
+      data = { body: event.data.text() };
+    }
   }
 
   const title = data.title || 'CodespaceDash';

@@ -126,12 +126,12 @@ export const WorkersPanel = ({ builds: state, plan }: Props) => {
             <StatusNote state={state} what="Workers Builds" />
           </div>
         </>
-      ) : !summary ? null : (
+      ) : (
         <>
           <div className={quotaWrap}>
             <QuotaBar
               label={`${WORKERS_PLANS[plan].label} のビルド時間`}
-              used={summary.usedMinutes}
+              used={state.data.usedMinutes}
               free={limit}
               unit="分"
             />
@@ -139,10 +139,11 @@ export const WorkersPanel = ({ builds: state, plan }: Props) => {
               使用量 API
               がないため、各ビルドの所要時間（1分単位で切り上げ）から推定
             </span>
-            {(summary.limitReached ||
-              (plan === 'free' && summary.usedMinutes >= limit)) && (
+            {(state.data.limitReached ||
+              (plan === 'free' && state.data.usedMinutes >= limit)) && (
               <span className={warn}>
-                ⚠ ビルド時間の上限に達しています。{fmtDate(summary.period.end)}
+                ⚠ ビルド時間の上限に達しています。
+                {fmtDate(state.data.period.end)}
                 にリセットされるまでビルドできません
               </span>
             )}

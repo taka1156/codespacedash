@@ -96,12 +96,14 @@ api.post('/codespaces/:name/stop', async (c) => {
 });
 
 // ── Web Push ──
-api.get('/push/config', (c) =>
-  c.json<PushConfigResponse>({
-    enabled: pushEnabled(c.env),
-    publicKey: pushEnabled(c.env) ? (c.env.VAPID_PUBLIC_KEY ?? null) : null,
-  }),
-);
+api.get('/push/config', (c) => {
+  // pushEnabled なら VAPID_PUBLIC_KEY は必ず入っている
+  const enabled = pushEnabled(c.env);
+  return c.json<PushConfigResponse>({
+    enabled,
+    publicKey: enabled ? (c.env.VAPID_PUBLIC_KEY as string) : null,
+  });
+});
 
 api.post('/push/subscriptions', async (c) => {
   if (!pushEnabled(c.env)) {

@@ -167,3 +167,172 @@ describe('applyDebug（取得状態の上書き）', () => {
     expect(out?.cloudflare.builds.status).toBe('unconfigured');
   });
 });
+
+describe('resolvePlans（GitHub・Copilot）', () => {
+  const off = (p: Partial<Settings> = {}) => {
+    const s = { ...settings({}), ...p };
+    s.debug = { ...s.debug, enabled: false };
+    return s;
+  };
+
+  it('自動なら API のプラン名から判定する', () => {
+    const d = { ...data([]), user: { ...data([]).user, plan: 'pro' } };
+    expect(resolvePlans(off(), d)).toMatchObject({
+      github: 'pro',
+      githubDetected: 'pro',
+      copilot: 'pro',
+    });
+  });
+
+  it('手動で選んだプランを使う（判定結果は別に返す）', () => {
+    expect(
+      resolvePlans(off({ githubPlan: 'pro', copilotPlan: 'free' }), data([])),
+    ).toMatchObject({ github: 'pro', githubDetected: 'free', copilot: 'free' });
+  });
+
+  it('データがなければ Free とみなす', () => {
+    expect(resolvePlans(off(), null)).toMatchObject({
+      github: 'free',
+      workers: 'free',
+      workersDetected: 'free',
+    });
+  });
+
+  it('デバッグのプラン上書きが最優先', () => {
+    expect(
+      resolvePlans(
+        settings({ githubPlan: 'pro', copilotPlan: 'pro_plus' }),
+        data([]),
+      ),
+    ).toMatchObject({ github: 'pro', copilot: 'pro_plus' });
+  });
+});
+
+describe('applyDebug（数値の入力）', () => {
+  it.each(['', '  ', 'abc', '-1', 'Infinity'])(
+    '"%s" は未入力扱いで実値のまま',
+    (v) => {
+      const d = data(real);
+      const out = applyDebug(d, settings({ codespacesHours: v }));
+      expect(out?.github.billing).toEqual(d.github.billing);
+    },
+  );
+
+  it('0 は有効な値', () => {
+    const out = applyDebug(data(real), settings({ codespacesHours: '0' }));
+    expect(codespacesQuota(okData(out?.github.billing))?.usedHours).toBe(0);
+  });
+});
+
+describe('applyDebug（他製品の項目）', () => {
+  it('Codespaces を上書きしても他製品の項目は残す', () => {
+    const other = item({
+      product: 'actions',
+      sku: 'storage',
+      unitType: 'GigabyteHours',
+    });
+    const out = applyDebug(
+      data([...real, other]),
+      settings({ codespacesHours: '1', codespacesStorageGb: '1' }),
+    );
+    const items = okData(out?.github.billing)?.usageItems ?? [];
+    expect(items).toContainEqual(other);
+    expect(items.filter((i) => i.product === 'codespaces')).toHaveLength(2);
+  });
+});
+
+describe('applyDebug（Actions・Copilot・Workers）', () => {
+  const actions = item({
+    product: 'actions',
+    sku: 'Actions Linux',
+    unitType: 'minutes',
+    grossAmount: 1,
+  });
+
+  it('Actions の分数を Linux の金額にして入れ替える（他の項目は残す）', () => {
+    const out = applyDebug(
+      data([...real, actions]),
+      settings({ actionsMinutes: '500' }),
+    );
+    const items = okData(out?.github.billing)?.usageItems ?? [];
+    const act = items.filter((i) => i.product === 'actions');
+    expect(act).toHaveLength(1);
+    expect(act[0].grossAmount).toBeCloseTo(3);
+    expect(items.filter((i) => i.product === 'codespaces')).toHaveLength(2);
+  });
+
+  it('Actions の minutes 以外の項目は消さない', () => {
+    const storage = item({ product: 'Actions', unitType: 'GigabyteHours' });
+    const out = applyDebug(data([storage]), settings({ actionsMinutes: '1' }));
+    expect(okData(out?.github.billing)?.usageItems).toContainEqual(storage);
+  });
+
+  it('使用量が取れていなくても疑似値で作る', () => {
+    const d = data([]);
+    d.github.billing = { status: 'error', message: 'x' };
+    const out = applyDebug(d, settings({ actionsMinutes: '10' }));
+    expect(okData(out?.github.billing)?.usageItems).toHaveLength(1);
+  });
+
+  it('月が分からないときのストレージは 1年の平均で GB-時間にする', () => {
+    const d = data([]);
+    d.github.billing = {
+      status: 'ok',
+      data: { timePeriod: { year: 2026 }, usageItems: [] },
+    };
+    const out = applyDebug(d, settings({ codespacesStorageGb: '2' }));
+    expect(
+      okData(out?.github.billing)?.usageItems[0].grossQuantity,
+    ).toBeCloseTo(2 * 730);
+  });
+
+  it('Copilot の金額をモデル別の 7:3 に分ける', () => {
+    const out = applyDebug(data([]), settings({ copilotUsd: '10' }));
+    const items = okData(out?.github.copilot)?.usageItems ?? [];
+    expect(items.map((i) => [i.model, i.grossAmount])).toEqual([
+      ['claude-sonnet-5-5', 7],
+      ['gpt-5', 3],
+    ]);
+    expect(items.map((i) => i.grossQuantity)).toEqual([700, 300]);
+  });
+
+  it('Workers が未設定でもビルド時間の疑似値でサンプルを出す', () => {
+    const out = applyDebug(data([]), settings({ workersMinutes: '100' }));
+    const b = okData(out?.cloudflare.builds);
+    expect(b?.usedMinutes).toBe(100);
+    expect(b?.builds.length).toBeGreaterThan(0);
+  });
+});
+
+describe('applyDebug（取得状態の上書き：未設定・エラー）', () => {
+  it('未設定にすると足りない設定名が入る', () => {
+    const out = applyDebug(
+      data(real),
+      settings({ sectionState: 'unconfigured' }),
+    );
+    expect(out?.github.codespaces).toEqual({
+      status: 'unconfigured',
+      setting: 'GITHUB_TOKEN',
+    });
+    expect(out?.cloudflare.usage).toMatchObject({
+      status: 'unconfigured',
+      setting: expect.stringContaining('CLOUDFLARE_API_TOKEN'),
+    });
+  });
+
+  it('エラーにすると全項目が error になる', () => {
+    const out = applyDebug(data(real), settings({ sectionState: 'error' }));
+    expect(
+      [
+        ...Object.values(out?.github ?? {}),
+        ...Object.values(out?.cloudflare ?? {}),
+      ].map((s) => s.status),
+    ).toEqual(Array(6).fill('error'));
+  });
+});
+
+describe('applyDebug（データがないとき）', () => {
+  it('通常のビルドではデータがなければ null のまま', () => {
+    expect(applyDebug(null, settings({ codespacesHours: '1' }))).toBeNull();
+  });
+});

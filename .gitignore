@@ -6,3 +6,6 @@ dist-pages/
 *.local
 .env
 .DS_Store
+
+# テストのカバレッジ
+coverage

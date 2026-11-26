@@ -92,6 +92,13 @@ describe('usageErrorDetails', () => {
     });
   });
 
+  it('失敗が1件だけならラベルを付けて出す', () => {
+    expect(usageErrorDetails(items, { a: ok(1), b: forbidden })).toEqual({
+      permissions: ['Account Analytics: Read'],
+      lines: [{ key: 'b', label: 'B', text: 'not authorized' }],
+    });
+  });
+
   it('理由が違えば項目ごとに出す（未設定は対象外）', () => {
     expect(
       usageErrorDetails(items, {

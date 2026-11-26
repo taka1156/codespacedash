@@ -73,7 +73,7 @@ export const CopilotPanel = ({ premiumRequests: state, plan }: Props) => {
   const quota =
     includedUsd === null ? null : (
       <div style={{ marginBottom: 16 }}>
-        {premiumRequests ? (
+        {state.status === 'ok' ? (
           <QuotaBar
             label={quotaLabel}
             used={usedUsd}
@@ -85,7 +85,7 @@ export const CopilotPanel = ({ premiumRequests: state, plan }: Props) => {
             label={quotaLabel}
             free={includedUsd}
             unit="USD"
-            unavailable={state.status === 'ok' ? '取得失敗' : statusText(state)}
+            unavailable={statusText(state)}
           />
         )}
       </div>

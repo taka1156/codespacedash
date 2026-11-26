@@ -9,10 +9,19 @@ export interface ActionsQuota {
   freeMinutes: number;
 }
 
-export const actionsQuota = (
+/** summary があれば必ず結果を返す（null を渡したときだけ null） */
+export function actionsQuota(
+  summary: BillingUsageSummary,
+  plan?: GithubPlan,
+): ActionsQuota;
+export function actionsQuota(
+  summary: BillingUsageSummary | null,
+  plan?: GithubPlan,
+): ActionsQuota | null;
+export function actionsQuota(
   summary: BillingUsageSummary | null,
   plan: GithubPlan = 'free',
-): ActionsQuota | null => {
+): ActionsQuota | null {
   if (!summary) {
     return null;
   }
@@ -27,4 +36,4 @@ export const actionsQuota = (
     usedMinutes: usedUsd / LINUX_USD_PER_MIN,
     freeMinutes: GITHUB_PLANS[plan].actionsMinutes,
   };
-};
+}
