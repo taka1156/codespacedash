@@ -4,6 +4,7 @@ import {
   type CopilotPlan,
   type GithubPlan,
   githubPlanFromApi,
+  type WorkersPlan,
 } from './plans';
 import { asset, IS_STATIC_PREVIEW } from './preview';
 import type {
@@ -12,6 +13,8 @@ import type {
   Codespace,
   DashboardResponse,
   PremiumRequestUsage,
+  WorkerBuild,
+  WorkersBuildsSummary,
   WorkflowRun,
 } from './types';
 
@@ -20,6 +23,8 @@ export interface ResolvedPlans {
   githubDetected: GithubPlan;
   copilot: CopilotPlan;
   claude: ClaudePlan;
+  workers: WorkersPlan;
+  workersDetected: WorkersPlan;
 }
 
 export const resolvePlans = (
@@ -36,6 +41,12 @@ export const resolvePlans = (
     githubDetected: githubPlanFromApi(data?.user.plan),
     copilot: d?.copilotPlan || settings.copilotPlan,
     claude: d?.claudePlan || settings.claudePlan,
+    workers:
+      d?.workersPlan ||
+      (settings.workersPlan === 'auto'
+        ? (data?.workersBuilds?.detectedPlan ?? 'free')
+        : settings.workersPlan),
+    workersDetected: data?.workersBuilds?.detectedPlan ?? 'free',
   };
 };
 
@@ -164,6 +175,49 @@ const mockRuns = (): WorkflowRun[] =>
     htmlUrl: 'https://github.com',
   }));
 
+const MOCK_ACCOUNT = '0123456789abcdef';
+
+const mockBuilds = (): WorkerBuild[] =>
+  (
+    [
+      ['codespacedash', 'running', null, 'feat: Workers Builds タブ', 2, 0],
+      ['codespacedash', 'stopped', 'success', 'fix: 通知の文言', 45, 2],
+      ['blog', 'stopped', 'fail', 'chore: bump astro', 130, 3],
+      ['api-gateway', 'stopped', 'success', 'release v2.1.0', 60 * 7, 1],
+      ['blog', 'stopped', 'cancelled', 'docs: typo', 60 * 26, 1],
+      ['api-gateway', 'stopped', 'success', 'feat: rate limit', 60 * 50, 2],
+    ] as const
+  ).map(([worker, status, outcome, msg, minAgo, dur], i) => ({
+    id: `00000000-0000-4000-8000-00000000000${i}`,
+    worker,
+    status,
+    outcome,
+    branch: i === 4 ? 'docs/typo' : 'main',
+    commitHash: `${(0xabc1234 + i * 977).toString(16)}0000000`,
+    commitMessage: msg,
+    source: i === 4 ? 'pull_request' : 'push',
+    repo: `example/${worker}`,
+    createdAt: ago(minAgo),
+    startedAt: ago(minAgo),
+    stoppedAt: status === 'stopped' ? ago(minAgo - dur) : null,
+    dashboardUrl: `https://dash.cloudflare.com/${MOCK_ACCOUNT}/workers`,
+  }));
+
+const mockWorkers = (minutes: number): WorkersBuildsSummary => {
+  const d = new Date();
+  return {
+    builds: mockBuilds(),
+    workerCount: 3,
+    usedMinutes: minutes,
+    period: {
+      start: new Date(d.getFullYear(), d.getMonth(), 1).toISOString(),
+      end: new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString(),
+    },
+    detectedPlan: 'free',
+    limitReached: false,
+  };
+};
+
 const mockBase = (
   aiProvider: DashboardResponse['aiProvider'],
 ): DashboardResponse => ({
@@ -181,6 +235,8 @@ const mockBase = (
   premiumRequests: { timePeriod: now(), usageItems: [] },
   claudeUsage: mockClaude(0, 0),
   claudeConfigured: true,
+  workersBuilds: mockWorkers(0),
+  workersConfigured: true,
   errors: {},
   notifyAfterMin: 60,
   fetchedAt: new Date().toISOString(),
@@ -305,6 +361,16 @@ export const applyDebug = (
       ];
     }
     out.billingSummary = { ...summary, usageItems: items };
+  }
+
+  const wkMin = num(d.workersMinutes);
+  if (wkMin !== null) {
+    out.workersBuilds = {
+      ...(out.workersBuilds ?? mockWorkers(0)),
+      usedMinutes: wkMin,
+    };
+    out.workersConfigured = true;
+    delete out.errors.workers;
   }
 
   const cpUsd = num(d.copilotUsd);

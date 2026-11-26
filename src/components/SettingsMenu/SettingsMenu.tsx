@@ -14,6 +14,8 @@ import {
   COPILOT_PLANS,
   GITHUB_PLAN_KEYS,
   GITHUB_PLANS,
+  WORKERS_PLAN_KEYS,
+  WORKERS_PLANS,
 } from '@/lib/plans';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
 import type { AiProvider } from '@/lib/types';
@@ -205,6 +207,23 @@ const GeneralTab = ({
         onChange={(v) => onChange({ githubPlan: v })}
       />
       <SelectRow
+        label="Cloudflare Workers"
+        hint={
+          settings.workersPlan === 'auto'
+            ? `API から推定: ${WORKERS_PLANS[plans.workersDetected].label}`
+            : undefined
+        }
+        value={settings.workersPlan}
+        options={[
+          { value: 'auto', label: '自動' },
+          ...WORKERS_PLAN_KEYS.map((k) => ({
+            value: k,
+            label: WORKERS_PLANS[k].label,
+          })),
+        ]}
+        onChange={(v) => onChange({ workersPlan: v })}
+      />
+      <SelectRow
         label="Copilot"
         hint="API で取れないので手動"
         value={settings.copilotPlan}
@@ -269,6 +288,18 @@ const DebugTab = ({
           onChange={(v) => onChangeDebug({ githubPlan: v })}
         />
         <SelectRow
+          label="Cloudflare Workers"
+          value={debug.workersPlan}
+          options={[
+            fallback,
+            ...WORKERS_PLAN_KEYS.map((k) => ({
+              value: k,
+              label: WORKERS_PLANS[k].label,
+            })),
+          ]}
+          onChange={(v) => onChangeDebug({ workersPlan: v })}
+        />
+        <SelectRow
           label="Copilot"
           value={debug.copilotPlan}
           options={[
@@ -318,6 +349,13 @@ const DebugTab = ({
           step="1"
           value={debug.actionsMinutes}
           onChange={(v) => onChangeDebug({ actionsMinutes: v })}
+        />
+        <NumberRow
+          label="Workers Builds"
+          hint="ビルド時間（分）"
+          step="1"
+          value={debug.workersMinutes}
+          onChange={(v) => onChangeDebug({ workersMinutes: v })}
         />
         <NumberRow
           label="Copilot"

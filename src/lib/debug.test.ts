@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_DEBUG, type Settings } from '@/hooks/useSettings';
 import { codespacesQuota } from './codespacesQuota';
-import { applyDebug } from './debug';
+import { applyDebug, resolvePlans } from './debug';
 import type { BillingUsageItem, DashboardResponse } from './types';
 
 const item = (p: Partial<BillingUsageItem>): BillingUsageItem => ({
@@ -33,6 +33,8 @@ const data = (usageItems: BillingUsageItem[]): DashboardResponse => ({
   premiumRequests: null,
   claudeUsage: null,
   claudeConfigured: false,
+  workersBuilds: null,
+  workersConfigured: false,
   errors: {},
   notifyAfterMin: 60,
   fetchedAt: '2026-11-26T00:00:00Z',
@@ -43,6 +45,8 @@ const settings = (debug: Partial<Settings['debug']>): Settings => ({
   githubPlan: 'auto',
   copilotPlan: 'pro',
   claudePlan: 'pro',
+  workersPlan: 'auto',
+  buildsTab: 'actions',
   debug: { ...EMPTY_DEBUG, enabled: true, ...debug },
 });
 
@@ -83,5 +87,53 @@ describe('applyDebug（Codespaces ストレージ）', () => {
     const s = settings({ codespacesStorageGb: '99' });
     s.debug.enabled = false;
     expect(applyDebug(d, s)).toBe(d);
+  });
+});
+
+describe('resolvePlans（Workers）', () => {
+  const withWorkers = (detectedPlan: 'free' | 'paid' | null) => ({
+    ...data([]),
+    workersBuilds: {
+      builds: [],
+      workerCount: 1,
+      usedMinutes: 0,
+      period: { start: '', end: '' },
+      detectedPlan,
+      limitReached: false,
+    },
+  });
+
+  it('自動なら API から推定したプランを使う', () => {
+    const s = settings({});
+    s.debug.enabled = false;
+    expect(resolvePlans(s, withWorkers('paid')).workers).toBe('paid');
+  });
+
+  it('推定できなければ Free 扱い', () => {
+    const s = settings({});
+    s.debug.enabled = false;
+    expect(resolvePlans(s, withWorkers(null)).workers).toBe('free');
+  });
+
+  it('手動で選んだプランが優先される', () => {
+    const s = { ...settings({}), workersPlan: 'paid' as const };
+    s.debug.enabled = false;
+    expect(resolvePlans(s, withWorkers('free')).workers).toBe('paid');
+  });
+
+  it('デバッグのプラン上書きが最優先', () => {
+    const s = {
+      ...settings({ workersPlan: 'free' }),
+      workersPlan: 'paid' as const,
+    };
+    expect(resolvePlans(s, withWorkers('paid')).workers).toBe('free');
+  });
+
+  it('ビルド時間の疑似値で使用量を上書きする', () => {
+    const out = applyDebug(
+      withWorkers('free'),
+      settings({ workersMinutes: '2500' }),
+    );
+    expect(out?.workersBuilds?.usedMinutes).toBe(2500);
   });
 });

@@ -15,5 +15,8 @@ export type {
   PremiumRequestUsage,
   PushConfigResponse,
   PushSubscriptionBody,
+  WorkerBuild,
+  WorkersBuildsSummary,
+  WorkersPlan,
   WorkflowRun,
 } from '../../shared/types';

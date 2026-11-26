@@ -135,6 +135,47 @@ export interface WorkflowRun {
   htmlUrl: string;
 }
 
+// Cloudflare Workers Builds（Git 連携している Worker のビルド）
+export type WorkersPlan = 'free' | 'paid';
+
+export interface WorkerBuild {
+  id: string;
+  worker: string;
+  status: 'queued' | 'initializing' | 'running' | 'stopped' | (string & {});
+  outcome:
+    | 'success'
+    | 'fail'
+    | 'skipped'
+    | 'cancelled'
+    | 'terminated'
+    | (string & {})
+    | null;
+  branch: string | null;
+  commitHash: string | null;
+  commitMessage: string | null;
+  source: 'push' | 'pull_request' | 'manual' | 'api' | (string & {}) | null;
+  repo: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  stoppedAt: string | null;
+  dashboardUrl: string;
+}
+
+export interface WorkersBuildsSummary {
+  /** 全 Worker の直近のビルド（新しい順） */
+  builds: WorkerBuild[];
+  /** Git 連携している Worker の数 */
+  workerCount: number;
+  /** 今期のビルド時間（分）。API に使用量がないため、ビルドの所要時間から推定 */
+  usedMinutes: number;
+  /** 集計期間（Free はビルド時間のリセット日基準、それ以外は今月） */
+  period: { start: string; end: string };
+  /** account limits の応答から推定したプラン（判定できなければ null） */
+  detectedPlan: WorkersPlan | null;
+  /** Free プランで上限に達しているか */
+  limitReached: boolean;
+}
+
 // GET /api/dashboard
 export interface DashboardResponse {
   user: GithubUser;
@@ -145,9 +186,14 @@ export interface DashboardResponse {
   premiumRequests: PremiumRequestUsage | null;
   claudeUsage: ClaudeUsage | null;
   claudeConfigured: boolean;
+  workersBuilds: WorkersBuildsSummary | null;
+  workersConfigured: boolean;
   // 取得に失敗したセクションだけメッセージが入る（他のセクションは表示を続ける）
   errors: Partial<
-    Record<'codespaces' | 'runs' | 'billing' | 'copilot' | 'claude', string>
+    Record<
+      'codespaces' | 'runs' | 'billing' | 'copilot' | 'claude' | 'workers',
+      string
+    >
   >;
   notifyAfterMin: number;
   fetchedAt: string;

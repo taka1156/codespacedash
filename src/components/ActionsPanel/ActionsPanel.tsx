@@ -39,6 +39,7 @@ interface Props {
   summary: BillingUsageSummary | null;
   runs: WorkflowRun[] | null;
   plan: GithubPlan;
+  tabs?: React.ReactNode;
 }
 
 const SKU_LABEL: Record<string, string> = {
@@ -59,7 +60,7 @@ const SKU_COLOR: Record<string, string> = {
   'Actions Windows': '#38bdf8',
 };
 
-export const ActionsPanel = ({ summary, runs, plan }: Props) => {
+export const ActionsPanel = ({ summary, runs, plan, tabs }: Props) => {
   // usageItems から Actions だけ抽出
   const actionItems =
     summary?.usageItems.filter((i) => i.product.toLowerCase() === 'actions') ??
@@ -99,6 +100,7 @@ export const ActionsPanel = ({ summary, runs, plan }: Props) => {
           : undefined
       }
       badgeText={hasUsage ? `${totalMinutes.toLocaleString()} 分` : undefined}
+      tabs={tabs}
     >
       {quota && (
         <div className={quotaWrap}>

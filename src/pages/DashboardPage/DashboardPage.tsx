@@ -3,10 +3,13 @@ import { ClaudePanel } from '@/components/ClaudePanel/ClaudePanel';
 import { CodespacesPanel } from '@/components/CodespacesPanel/CodespacesPanel';
 import { CopilotPanel } from '@/components/CopilotPanel/CopilotPanel';
 import { Header } from '@/components/Header/Header';
+import { PanelTabs } from '@/components/shared/PanelTabs/PanelTabs';
+import { WorkersPanel } from '@/components/WorkersPanel/WorkersPanel';
 import { useDashboard } from '@/hooks/useDashboard';
-import { useSettings } from '@/hooks/useSettings';
+import { type BuildsTab, useSettings } from '@/hooks/useSettings';
 import { applyDebug, resolvePlans } from '@/lib/debug';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
+import { buildKind } from '@/lib/workerBuildKind';
 import {
   app,
   dashboardGrid,
@@ -37,6 +40,30 @@ export const DashboardPage = () => {
   const data = applyDebug(rawData, settings);
   const plans = resolvePlans(settings, data);
   const sectionErrors = data ? Object.values(data.errors) : [];
+
+  const buildsTabs = data && (
+    <PanelTabs<BuildsTab>
+      label="ビルドの表示切り替え"
+      current={settings.buildsTab}
+      onChange={(buildsTab) => update({ buildsTab })}
+      items={[
+        {
+          key: 'actions',
+          label: '⚡ Actions',
+          alert: data.workflowRuns?.some(
+            (r) => r.status === 'completed' && r.conclusion === 'failure',
+          ),
+        },
+        {
+          key: 'workers',
+          label: '☁ Workers',
+          alert: data.workersBuilds?.builds.some(
+            (b) => buildKind(b) === 'failure',
+          ),
+        },
+      ]}
+    />
+  );
 
   return (
     <div className={app}>
@@ -99,11 +126,21 @@ export const DashboardPage = () => {
               billingSummary={data.billingSummary}
               plan={plans.github}
             />
-            <ActionsPanel
-              summary={data.billingSummary}
-              runs={data.workflowRuns}
-              plan={plans.github}
-            />
+            {settings.buildsTab === 'workers' ? (
+              <WorkersPanel
+                summary={data.workersBuilds}
+                configured={data.workersConfigured}
+                plan={plans.workers}
+                tabs={buildsTabs}
+              />
+            ) : (
+              <ActionsPanel
+                summary={data.billingSummary}
+                runs={data.workflowRuns}
+                plan={plans.github}
+                tabs={buildsTabs}
+              />
+            )}
             {data.aiProvider !== aiProvider && loading ? (
               <div className={skeletonPanel} />
             ) : aiProvider === 'claude' ? (
