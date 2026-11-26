@@ -99,7 +99,7 @@ export const ActionsPanel = ({ billing, runs, plan }: Props) => {
   return (
     <BasePanel
       title="Actions"
-      icon="⚡"
+      icon="ϟ"
       subTitle={
         summary
           ? `${summary.timePeriod.year}年${summary.timePeriod.month ?? ''}月の実行時間`

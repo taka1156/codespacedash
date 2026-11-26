@@ -99,7 +99,7 @@ export const DashboardPage = () => {
             },
             {
               key: 'cloudflare',
-              label: '☁ Cloudflare',
+              label: '☁\uFE0E Cloudflare',
               alert: data ? cloudflareAlert(data) : false,
             },
           ]}

@@ -102,7 +102,7 @@ export const WorkersPanel = ({ builds: state, plan }: Props) => {
   return (
     <BasePanel
       title="Workers Builds"
-      icon="☁"
+      icon={'☁\uFE0E'}
       subTitle={
         summary
           ? `${periodLabel} のビルド時間 · ${summary.workerCount} Worker`
