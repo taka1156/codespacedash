@@ -301,9 +301,9 @@
   integrity sha512-/zl++/e/0JLMttdz4lUsCo58NaLKQZKancI2YPciaLH9iLHq6UOP2BQZt+dejGRrV9UxdpPYPHUYU9Km5PcALA==
 
 "@cloudflare/workers-types@^5.20261101.1":
-  version "5.20261123.1"
-  resolved "https://registry.yarnpkg.com/@cloudflare/workers-types/-/workers-types-5.20261123.1.tgz#5214c1b8d3e1bdb575dc8d302c10649f78ee88ec"
-  integrity sha512-T5ZYVByysoCFgJytSwsGBLS0ebNhxFYLSbsERdVZ04YErfmpBGlvYErvUmKT+mjNR/xAl4fxCedpjqLgYIyWSg==
+  version "5.20261127.1"
+  resolved "https://registry.yarnpkg.com/@cloudflare/workers-types/-/workers-types-5.20261127.1.tgz#ac72d978758a3ba36593f2cd5ee0b7b151e6eb22"
+  integrity sha512-G0vZByiP+V6JvPdyf1d7kPYow3yOk4vZV0PRiFhBeRjVjCT1uVJurKTpJca2WVTnb2TsicHdpC3KeHhwSciIlg==
 
 "@cloudflare/workers-utils@0.57.0":
   version "0.57.0"
