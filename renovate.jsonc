@@ -12,18 +12,14 @@
     "labels": ["security"]
   },
   "lockFileMaintenance": {
-    "enabled": true,
-    "schedule": ["* 20-23 * * 5"]
+    "enabled": false
   },
   "packageRules": [
-    // テストが拡充できたら、下のブロックのコメントを外してパッチ版を自動マージする
     // {
     //   "matchUpdateTypes": ["patch"],
-    //   // 0.x 系はパッチ版でも破壊的変更が入りやすいので除外
     //   "matchCurrentVersion": "!/^0/",
-    //   "automerge": true
-    //   // PRを作らずブランチのCIが通ったら直接マージする場合は有効化（PR通知が減る）
-    //   // , "automergeType": "branch"
+    //   "automerge": true,
+    //   "automergeType": "branch"
     // }
   ]
 }
