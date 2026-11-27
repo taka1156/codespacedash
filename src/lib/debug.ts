@@ -13,6 +13,9 @@ import {
   type DashboardResponse,
   okData,
   type PremiumRequestUsage,
+  type PullRequest,
+  type PullsResponse,
+  type RepoPulls,
   type SectionState,
   type WorkerBuild,
   type WorkersBuildsSummary,
@@ -271,6 +274,22 @@ const mockBase = (): DashboardResponse => ({
   fetchedAt: new Date().toISOString(),
 });
 
+/** デバッグの「取得状態を上書き」で出す、取れなかった状態 */
+const fakeState = (
+  state: Exclude<Settings['debug']['sectionState'], ''>,
+  setting: string,
+  permission: string,
+): SectionState<never> =>
+  state === 'unconfigured'
+    ? { status: 'unconfigured', setting }
+    : state === 'forbidden'
+      ? {
+          status: 'forbidden',
+          permission,
+          message: 'API 403: Resource not accessible（デバッグの疑似エラー）',
+        }
+      : { status: 'error', message: 'API 500（デバッグの疑似エラー）' };
+
 const LINUX_USD_PER_MIN = 0.006;
 
 const isCsStorage = (i: BillingUsageItem) => /storage/i.test(i.sku);
@@ -390,18 +409,10 @@ export const applyDebug = (
     out.github.copilot = ok(p);
   }
 
-  if (d.sectionState) {
-    const fake = (setting: string, permission: string): SectionState<never> =>
-      d.sectionState === 'unconfigured'
-        ? { status: 'unconfigured', setting }
-        : d.sectionState === 'forbidden'
-          ? {
-              status: 'forbidden',
-              permission,
-              message:
-                'API 403: Resource not accessible（デバッグの疑似エラー）',
-            }
-          : { status: 'error', message: 'API 500（デバッグの疑似エラー）' };
+  const state = d.sectionState;
+  if (state) {
+    const fake = (setting: string, permission: string) =>
+      fakeState(state, setting, permission);
     out.github = {
       codespaces: fake('GITHUB_TOKEN', 'Codespaces: Read'),
       billing: fake('GITHUB_TOKEN', 'Plan: Read'),
@@ -416,4 +427,73 @@ export const applyDebug = (
   }
 
   return out;
+};
+
+// ── PR タブ ──
+
+const MOCK_PULL_TITLES = [
+  ['feat: 設定画面を追加', 'review_required', false],
+  ['fix: 通知が二重に届く', 'approved', false],
+  ['wip: 新しいグラフ', null, true],
+  ['chore(deps): update dependency vite', 'changes_requested', false],
+] as const;
+
+/** リポジトリ名から決まる疑似 PR（名前ごとに件数を変えて、0件の見た目も出す） */
+const mockRepoPulls = (repo: string, index: number): RepoPulls => {
+  const count = [3, 1, 0, 2][index % 4];
+  const url = `https://github.com/${repo}`;
+  const pulls = Array.from({ length: count }, (_, i): PullRequest => {
+    const [title, review, draft] =
+      MOCK_PULL_TITLES[(index + i) % MOCK_PULL_TITLES.length];
+    return {
+      number: 40 - i * 3,
+      title,
+      url: `${url}/pull/${40 - i * 3}`,
+      draft,
+      author: i === 2 ? 'renovate[bot]' : 'preview-user',
+      branch: `topic-${i + 1}`,
+      createdAt: ago(60 * 24 * (i + 1)),
+      updatedAt: ago(25 + i * 180),
+      review,
+      comments: i * 2,
+    };
+  });
+  // 1つ目は表示件数より多くあることにして「残り N 件」の見た目を出す
+  return {
+    repo,
+    found: true,
+    url,
+    private: index === 1,
+    totalCount: index === 0 ? count + 12 : count,
+    pulls,
+  };
+};
+
+export const applyPullsDebug = (
+  data: PullsResponse | null,
+  settings: Settings,
+): PullsResponse | null => {
+  const d = settings.debug;
+  if (!d.enabled) {
+    return data;
+  }
+  const base =
+    data ??
+    (IS_STATIC_PREVIEW
+      ? {
+          pulls: ok(settings.favorites.map(mockRepoPulls)),
+          fetchedAt: new Date().toISOString(),
+        }
+      : null);
+  if (!base || !d.sectionState) {
+    return base;
+  }
+  return {
+    ...base,
+    pulls: fakeState(
+      d.sectionState,
+      'GITHUB_TOKEN',
+      'Pull requests: Read（Repository permissions）',
+    ),
+  };
 };

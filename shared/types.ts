@@ -108,6 +108,48 @@ export interface WorkflowRun {
   htmlUrl: string;
 }
 
+// お気に入りリポジトリのオープンな PR
+export type PullReview = 'approved' | 'changes_requested' | 'review_required';
+
+export interface PullRequest {
+  number: number;
+  title: string;
+  url: string;
+  draft: boolean;
+  /** 退会したユーザーなどは null */
+  author: string | null;
+  branch: string;
+  createdAt: string;
+  updatedAt: string;
+  /** レビューの状態。ブランチ保護でレビュー必須にしていなければ null */
+  review: PullReview | null;
+  comments: number;
+}
+
+export interface RepoPulls {
+  /** 登録した名前（owner/repo） */
+  repo: string;
+  /** リポジトリが見つからない・トークンで見られないときは false */
+  found: boolean;
+  url: string;
+  private: boolean;
+  /** オープンな PR の総数（pulls は更新が新しい順に上限まで） */
+  totalCount: number;
+  pulls: PullRequest[];
+}
+
+// GET /api/pulls?repos=owner/a,owner/b
+export interface PullsResponse {
+  /** 登録した順に並ぶ */
+  pulls: SectionState<RepoPulls[]>;
+  fetchedAt: string;
+}
+
+// GET /api/repos（お気に入りに登録するときの候補）
+export interface RepoCandidatesResponse {
+  repos: SectionState<string[]>;
+}
+
 // Cloudflare Workers Builds（Git 連携している Worker のビルド）
 export type WorkersPlan = 'free' | 'paid';
 

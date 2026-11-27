@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_DEBUG, type Settings } from '@/hooks/useSettings';
 import { codespacesQuota } from './codespacesQuota';
-import { applyDebug, resolvePlans } from './debug';
-import { type BillingUsageItem, type DashboardResponse, okData } from './types';
+import { applyDebug, applyPullsDebug, resolvePlans } from './debug';
+import {
+  type BillingUsageItem,
+  type DashboardResponse,
+  okData,
+  type PullsResponse,
+} from './types';
 
 const item = (p: Partial<BillingUsageItem>): BillingUsageItem => ({
   product: 'codespaces',
@@ -48,6 +53,7 @@ const settings = (debug: Partial<Settings['debug']>): Settings => ({
   copilotPlan: 'pro',
   workersPlan: 'auto',
   serviceTab: 'github',
+  favorites: [],
   debug: { ...EMPTY_DEBUG, enabled: true, ...debug },
 });
 
@@ -334,5 +340,40 @@ describe('applyDebug（取得状態の上書き：未設定・エラー）', () 
 describe('applyDebug（データがないとき）', () => {
   it('通常のビルドではデータがなければ null のまま', () => {
     expect(applyDebug(null, settings({ codespacesHours: '1' }))).toBeNull();
+  });
+});
+
+describe('applyPullsDebug', () => {
+  const real: PullsResponse = {
+    pulls: { status: 'ok', data: [] },
+    fetchedAt: '2026-11-26T00:00:00Z',
+  };
+
+  it('デバッグがオフなら何もしない', () => {
+    const s = { ...settings({}), debug: EMPTY_DEBUG };
+    expect(applyPullsDebug(real, s)).toBe(real);
+    expect(applyPullsDebug(null, s)).toBeNull();
+  });
+
+  it('上書きがなければ実データのまま、データがなければ null のまま', () => {
+    expect(applyPullsDebug(real, settings({}))).toBe(real);
+    expect(
+      applyPullsDebug(null, settings({ sectionState: 'error' })),
+    ).toBeNull();
+  });
+
+  it('取得状態を上書きする', () => {
+    expect(
+      applyPullsDebug(real, settings({ sectionState: 'forbidden' }))?.pulls,
+    ).toMatchObject({
+      status: 'forbidden',
+      permission: 'Pull requests: Read（Repository permissions）',
+    });
+    expect(
+      applyPullsDebug(real, settings({ sectionState: 'unconfigured' })),
+    ).toEqual({
+      ...real,
+      pulls: { status: 'unconfigured', setting: 'GITHUB_TOKEN' },
+    });
   });
 });

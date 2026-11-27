@@ -18,7 +18,7 @@ export class GithubError extends Error {
   }
 }
 
-const gh = async <T>(
+export const gh = async <T>(
   env: Env,
   path: string,
   init: RequestInit = {},

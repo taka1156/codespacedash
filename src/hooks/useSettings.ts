@@ -8,12 +8,20 @@ import {
   type WorkersPlan,
 } from '@/lib/plans';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
+import { isRepoName, MAX_FAVORITES, uniqueRepos } from '../../shared/repos';
 
 const KEY = 'codespacedash:settings';
 
-/** GitHub / Cloudflare のどちらのタブを表示するか */
-export type ServiceTab = 'github' | 'cloudflare';
-const SERVICE_TABS: readonly ServiceTab[] = ['github', 'cloudflare'];
+/** GitHub / Cloudflare / PR のどのタブを表示するか */
+export type ServiceTab = 'github' | 'cloudflare' | 'pulls';
+const SERVICE_TABS: readonly ServiceTab[] = ['github', 'cloudflare', 'pulls'];
+
+/** 静的プレビューで最初から入れておくお気に入り（疑似データの PR が出る） */
+export const PREVIEW_FAVORITES = [
+  'example/web-app',
+  'example/api-server',
+  'example/docs-site',
+];
 
 /** デバッグ：全項目を「取れなかった」状態にして見た目を確かめる */
 export type DebugSectionState = '' | 'unconfigured' | 'forbidden' | 'error';
@@ -42,6 +50,8 @@ export interface Settings {
   copilotPlan: CopilotPlan;
   workersPlan: WorkersPlan | 'auto';
   serviceTab: ServiceTab;
+  /** PR タブに出すリポジトリ（owner/repo、登録した順） */
+  favorites: string[];
   debug: DebugSettings;
 }
 
@@ -71,6 +81,7 @@ const DEFAULTS: Settings = {
   copilotPlan: 'pro',
   workersPlan: 'auto',
   serviceTab: 'github',
+  favorites: IS_STATIC_PREVIEW ? PREVIEW_FAVORITES : [],
   debug: IS_STATIC_PREVIEW
     ? { ...EMPTY_DEBUG, ...SAMPLE_DEBUG, enabled: true }
     : EMPTY_DEBUG,
@@ -83,6 +94,14 @@ const pick = <T extends string>(
 ): T => (allowed.includes(v as T) ? (v as T) : fallback);
 
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
+
+/** 形の正しい名前だけを、重複なしで上限まで残す */
+const favoritesOf = (v: unknown): string[] =>
+  Array.isArray(v)
+    ? uniqueRepos(v.filter(isRepoName)).slice(0, MAX_FAVORITES)
+    : IS_STATIC_PREVIEW
+      ? PREVIEW_FAVORITES
+      : [];
 
 const load = (): Settings => {
   try {
@@ -110,6 +129,7 @@ const load = (): Settings => {
       ),
       // 古い版の aiProvider / claudePlan / buildsTab は読まずに捨てる
       serviceTab: pick(raw.serviceTab, SERVICE_TABS, DEFAULTS.serviceTab),
+      favorites: favoritesOf(raw.favorites),
       debug: {
         enabled: IS_STATIC_PREVIEW || d.enabled === true,
         sectionState: pick(d.sectionState, DEBUG_SECTION_STATES, ''),

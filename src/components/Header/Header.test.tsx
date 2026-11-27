@@ -33,6 +33,7 @@ const settings: Settings = {
   copilotPlan: 'pro',
   workersPlan: 'auto',
   serviceTab: 'github',
+  favorites: [],
   debug: EMPTY_DEBUG,
 };
 

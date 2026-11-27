@@ -5,7 +5,9 @@ import {
   CSRF_HEADER,
   CSRF_VALUE,
   type DashboardResponse,
+  type PullsResponse,
   type PushConfigResponse,
+  type RepoCandidatesResponse,
 } from '../shared/types';
 import { type AppEnv, type Env, numVar } from './env';
 import { cloudflareAccess } from './lib/access';
@@ -26,6 +28,11 @@ import {
   stopCodespace,
 } from './lib/github';
 import { checkForgottenCodespaces } from './lib/notify';
+import {
+  listPullRequests,
+  listRepoCandidates,
+  parseRepoList,
+} from './lib/pulls';
 import {
   deleteSubscription,
   parseSubscription,
@@ -53,6 +60,8 @@ const PERM = {
   codespaces: 'Codespaces: Read',
   plan: 'Plan: Read',
   actions: 'Actions: Read（Repository permissions）',
+  pulls: 'Pull requests: Read（Repository permissions）',
+  metadata: 'Metadata: Read（Repository permissions）',
   builds: 'Workers Builds Configuration: Read と Workers Scripts: Read',
   // 使用量は項目ごとに判定するので、ここは全体が取れなかったとき用
   analytics: 'Account Analytics: Read',
@@ -88,6 +97,18 @@ api.get('/dashboard', async (c) => {
     notifyAfterMin: numVar(c.env.NOTIFY_AFTER_MIN, 60),
     fetchedAt: new Date().toISOString(),
   });
+});
+
+// お気に入りリポジトリのオープンな PR（お気に入りは端末ごとなのでクエリで受け取る）
+api.get('/pulls', async (c) => {
+  const repos = parseRepoList(c.req.query('repos'));
+  const pulls = await settle(() => listPullRequests(c.env, repos), PERM.pulls);
+  return c.json<PullsResponse>({ pulls, fetchedAt: new Date().toISOString() });
+});
+
+api.get('/repos', async (c) => {
+  const repos = await settle(() => listRepoCandidates(c.env), PERM.metadata);
+  return c.json<RepoCandidatesResponse>({ repos });
 });
 
 api.post('/codespaces/:name/stop', async (c) => {

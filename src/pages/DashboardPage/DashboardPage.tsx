@@ -3,14 +3,17 @@ import { CloudflareUsagePanel } from '@/components/CloudflareUsagePanel/Cloudfla
 import { CodespacesPanel } from '@/components/CodespacesPanel/CodespacesPanel';
 import { CopilotPanel } from '@/components/CopilotPanel/CopilotPanel';
 import { Header } from '@/components/Header/Header';
+import { PullsPanel } from '@/components/PullsPanel/PullsPanel';
 import { PanelTabs } from '@/components/shared/PanelTabs/PanelTabs';
 import { WorkersPanel } from '@/components/WorkersPanel/WorkersPanel';
 import { useDashboard } from '@/hooks/useDashboard';
+import { usePulls } from '@/hooks/usePulls';
 import { type ServiceTab, useSettings } from '@/hooks/useSettings';
 import { usageValues } from '@/lib/cloudflareUsage';
-import { applyDebug, resolvePlans } from '@/lib/debug';
+import { applyDebug, applyPullsDebug, resolvePlans } from '@/lib/debug';
 import { CLOUDFLARE_DAILY_FREE, CLOUDFLARE_STORAGE_FREE } from '@/lib/plans';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
+import { totalPulls } from '@/lib/pulls';
 import type { DashboardResponse } from '@/lib/types';
 import { buildKind } from '@/lib/workerBuildKind';
 import {
@@ -46,7 +49,11 @@ export const DashboardPage = () => {
     stopCodespace,
   } = useDashboard();
 
+  const pulls = usePulls(settings.favorites);
+
   const data = applyDebug(rawData, settings);
+  const pullsData = applyPullsDebug(pulls.data, settings);
+  const pullsTotal = totalPulls(pullsData?.pulls ?? null);
   const plans = resolvePlans(settings, data);
   const tab = settings.serviceTab;
 
@@ -54,8 +61,11 @@ export const DashboardPage = () => {
     <div className={app}>
       <Header
         user={data?.user ?? null}
-        onRefresh={fetchAll}
-        loading={loading}
+        onRefresh={() => {
+          fetchAll();
+          pulls.fetchPulls();
+        }}
+        loading={loading || pulls.loading}
         lastFetched={lastFetched}
         settings={settings}
         plans={plans}
@@ -103,9 +113,19 @@ export const DashboardPage = () => {
               label: '☁\uFE0E Cloudflare',
               alert: data ? cloudflareAlert(data) : false,
             },
+            {
+              key: 'pulls',
+              label: pullsTotal === null ? '⇄ PR' : `⇄ PR (${pullsTotal})`,
+            },
           ]}
         />
-        {!data ? (
+        {tab === 'pulls' ? (
+          <PullsPanel
+            favorites={settings.favorites}
+            pulls={pullsData?.pulls ?? null}
+            error={pulls.error}
+          />
+        ) : !data ? (
           loading && (
             <div className={dashboardGrid}>
               {[1, 2, 3].map((i) => (

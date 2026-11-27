@@ -14,6 +14,7 @@ import {
   stopCodespace,
 } from './lib/github';
 import { checkForgottenCodespaces } from './lib/notify';
+import { listPullRequests, listRepoCandidates } from './lib/pulls';
 import { sendToAll } from './lib/push';
 import { fakeEnv, PUSH_VARS } from './testing/fakeEnv';
 
@@ -32,6 +33,11 @@ vi.mock('./lib/cloudflare', async (importOriginal) => ({
   getWorkersBuilds: vi.fn(),
 }));
 vi.mock('./lib/cloudflareUsage', () => ({ getCloudflareUsage: vi.fn() }));
+vi.mock('./lib/pulls', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./lib/pulls')>()),
+  listPullRequests: vi.fn(),
+  listRepoCandidates: vi.fn(),
+}));
 vi.mock('./lib/notify', () => ({ checkForgottenCodespaces: vi.fn() }));
 vi.mock('./lib/push', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./lib/push')>()),
@@ -208,6 +214,65 @@ describe('GET /api/dashboard', () => {
     const res = await call('/api/dashboard');
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({ error: 'Bad creds' });
+  });
+});
+
+describe('GET /api/pulls', () => {
+  it('クエリのリポジトリを検証して渡し、取得状態を返す', async () => {
+    vi.mocked(listPullRequests).mockResolvedValue([]);
+    const res = await call(
+      `/api/pulls?repos=${encodeURIComponent('me/app,https://github.com/org/lib')}`,
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      pulls: { status: 'ok', data: [] },
+      fetchedAt: NOW.toISOString(),
+    });
+    expect(listPullRequests).toHaveBeenCalledWith(expect.anything(), [
+      'me/app',
+      'org/lib',
+    ]);
+  });
+
+  it('権限が足りなければ Pull requests の権限名を添える', async () => {
+    vi.mocked(listPullRequests).mockRejectedValue(new GithubError(403, 'no'));
+    const res = await call('/api/pulls?repos=me/app');
+    expect((await res.json<{ pulls: unknown }>()).pulls).toEqual({
+      status: 'forbidden',
+      permission: 'Pull requests: Read（Repository permissions）',
+      message: 'no',
+    });
+  });
+
+  it('不正なリポジトリ名は呼ばずに 400', async () => {
+    const res = await call('/api/pulls?repos=bad%20name');
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      error: 'リポジトリ名が不正です: bad name',
+    });
+    expect(listPullRequests).not.toHaveBeenCalled();
+  });
+});
+
+describe('GET /api/repos', () => {
+  it('登録の候補を取得状態つきで返す', async () => {
+    vi.mocked(listRepoCandidates).mockResolvedValue(['me/app']);
+    const res = await call('/api/repos');
+    expect(await res.json()).toEqual({
+      repos: { status: 'ok', data: ['me/app'] },
+    });
+  });
+
+  it('取れなければ Metadata の権限名を添える', async () => {
+    vi.mocked(listRepoCandidates).mockRejectedValue(new GithubError(401, 'x'));
+    const res = await call('/api/repos');
+    expect(await res.json()).toEqual({
+      repos: {
+        status: 'forbidden',
+        permission: 'Metadata: Read（Repository permissions）',
+        message: 'x',
+      },
+    });
   });
 });
 

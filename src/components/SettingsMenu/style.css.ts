@@ -237,3 +237,60 @@ export const smallBtn = style({
     '&:disabled': { opacity: 0.45, cursor: 'default' },
   },
 });
+
+// ── お気に入りタブ ──
+
+export const favAdd = style({
+  display: 'flex',
+  gap: 6,
+});
+
+export const favError = style({
+  fontSize: '0.72rem',
+  color: 'var(--red)',
+});
+
+export const favList = style({
+  listStyle: 'none',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
+});
+
+export const favItem = style({
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4,
+  padding: '4px 4px 4px 10px',
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid var(--border)',
+  background: 'var(--bg-card)',
+});
+
+export const favName = style({
+  flex: 1,
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.78rem',
+});
+
+export const iconBtn = style({
+  flexShrink: 0,
+  width: 24,
+  height: 24,
+  borderRadius: 4,
+  background: 'transparent',
+  color: 'var(--text-muted)',
+  fontSize: '0.75rem',
+  selectors: {
+    '&:hover:not(:disabled)': {
+      color: 'var(--text)',
+      background: 'var(--bg-hover)',
+    },
+    '&:focus-visible': { outline: '2px solid var(--cyan)' },
+    '&:disabled': { opacity: 0.3, cursor: 'default' },
+  },
+});
