@@ -15,7 +15,9 @@ export const tab = style({
   alignItems: 'center',
   justifyContent: 'center',
   gap: 6,
+  minWidth: 0,
   padding: '6px 10px',
+  whiteSpace: 'nowrap',
   borderRadius: 4,
   background: 'transparent',
   color: 'var(--text-muted)',
@@ -31,6 +33,14 @@ export const tab = style({
     '&:focus-visible': {
       outline: '2px solid var(--cyan)',
       outlineOffset: 1,
+    },
+  },
+  // タブが3つ並ぶと狭い画面では折り返すので、余白と文字を詰める
+  '@media': {
+    '(max-width: 420px)': {
+      padding: '6px 4px',
+      gap: 4,
+      fontSize: '0.74rem',
     },
   },
 });

@@ -3,6 +3,8 @@ import type {
   Codespace,
   DashboardResponse,
   PremiumRequestItem,
+  PullRequest,
+  RepoPulls,
   WorkerBuild,
   WorkersBuildsSummary,
   WorkflowRun,
@@ -141,5 +143,32 @@ export const dashboard = (
     notifyAfterMin: 60,
     fetchedAt: NOW.toISOString(),
     ...rest,
+  };
+};
+
+export const pull = (p: Partial<PullRequest> = {}): PullRequest => ({
+  number: 12,
+  title: 'feat: PR タブ',
+  url: 'https://github.com/me/app/pull/12',
+  draft: false,
+  author: 'me',
+  branch: 'feat/pulls',
+  createdAt: ago(60 * 24),
+  updatedAt: ago(30),
+  review: null,
+  comments: 0,
+  ...p,
+});
+
+export const repoPulls = (p: Partial<RepoPulls> = {}): RepoPulls => {
+  const pulls = p.pulls ?? [pull()];
+  return {
+    repo: 'me/app',
+    found: true,
+    url: 'https://github.com/me/app',
+    private: false,
+    totalCount: pulls.length,
+    pulls,
+    ...p,
   };
 };

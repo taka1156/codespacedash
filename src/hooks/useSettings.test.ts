@@ -33,6 +33,7 @@ describe('useSettings', () => {
       copilotPlan: 'pro',
       workersPlan: 'auto',
       serviceTab: 'github',
+      favorites: [],
       debug: EMPTY_DEBUG,
     });
   });
@@ -48,7 +49,8 @@ describe('useSettings', () => {
       githubPlan: 'pro',
       copilotPlan: 'pro_plus',
       workersPlan: 'paid',
-      serviceTab: 'cloudflare',
+      serviceTab: 'pulls',
+      favorites: ['me/app', 'org/lib'],
       debug: {
         enabled: true,
         sectionState: 'forbidden',
@@ -75,6 +77,7 @@ describe('useSettings', () => {
         copilotPlan: 1,
         workersPlan: null,
         serviceTab: 'aws',
+        favorites: 'me/app',
         aiProvider: 'claude',
         debug: {
           enabled: 'yes',
@@ -93,8 +96,23 @@ describe('useSettings', () => {
       copilotPlan: 'pro',
       workersPlan: 'auto',
       serviceTab: 'github',
+      favorites: [],
       debug: EMPTY_DEBUG,
     });
+  });
+
+  it('お気に入りは形の違う名前・重複を除き、上限までにする', async () => {
+    const many = Array.from({ length: 35 }, (_, i) => `me/r${i}`);
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        favorites: ['me/app', 'bad', 1, 'ME/APP', ...many],
+      }),
+    );
+    const { hook } = await setup();
+    const { favorites } = hook.result.current.settings;
+    expect(favorites).toHaveLength(30);
+    expect(favorites.slice(0, 2)).toEqual(['me/app', 'me/r0']);
   });
 
   it('debug がない保存も読める', async () => {
@@ -145,6 +163,19 @@ describe('useSettings', () => {
         ...SAMPLE_DEBUG,
         enabled: true,
       });
+    });
+
+    it('お気に入りの既定は疑似データのリポジトリ', async () => {
+      const { hook, PREVIEW_FAVORITES } = await setup();
+      expect(hook.result.current.settings.favorites).toEqual(PREVIEW_FAVORITES);
+      localStorage.setItem(KEY, JSON.stringify({ favorites: null }));
+      const again = await setup();
+      expect(again.hook.result.current.settings.favorites).toEqual(
+        PREVIEW_FAVORITES,
+      );
+      localStorage.setItem(KEY, JSON.stringify({ favorites: [] }));
+      const empty = await setup();
+      expect(empty.hook.result.current.settings.favorites).toEqual([]);
     });
 
     it('保存でオフになっていてもデバッグはオン', async () => {

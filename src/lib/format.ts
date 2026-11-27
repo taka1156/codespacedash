@@ -7,3 +7,18 @@ export const fmtNum = (n: number) =>
       : n < 10
         ? n.toFixed(1)
         : Math.round(n).toLocaleString('en-US');
+
+/** 何分前・何時間前・何日前 */
+export const fmtAgo = (iso: string) => {
+  const min = (Date.now() - new Date(iso).getTime()) / 60_000;
+  if (min < 1) {
+    return 'たった今';
+  }
+  if (min < 60) {
+    return `${Math.floor(min)}分前`;
+  }
+  if (min < 1440) {
+    return `${Math.floor(min / 60)}時間前`;
+  }
+  return `${Math.floor(min / 1440)}日前`;
+};
