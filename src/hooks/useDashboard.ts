@@ -95,7 +95,7 @@ export const useDashboard = () => {
       return;
     }
     const running = codespaces.filter((c) => c.state === 'Available').length;
-    document.title = running ? `(${running}) CodespaceDash` : 'CodespaceDash';
+    document.title = running ? `(${running}) QuotaDash` : 'QuotaDash';
 
     const forgotten = codespaces.filter(
       (c) =>

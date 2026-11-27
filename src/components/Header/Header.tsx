@@ -119,7 +119,7 @@ export const Header = ({
   <header className={header}>
     <div className={headerLeft}>
       <div className={headerLogo}>
-        <img src={asset('logo.svg')} alt="CodespaceDash" />
+        <img src={asset('logo.svg')} alt="QuotaDash" />
       </div>
       {settings.debug.enabled && (
         <span className={debugBadge} title="デバッグモード：疑似値を表示中">

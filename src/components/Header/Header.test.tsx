@@ -76,7 +76,7 @@ beforeEach(() => {
 describe('Header', () => {
   it('ロゴ・更新時刻・ユーザー・ログアウトを出す', () => {
     header();
-    expect(screen.getByAltText('CodespaceDash')).toHaveAttribute(
+    expect(screen.getByAltText('QuotaDash')).toHaveAttribute(
       'src',
       '/base/logo.svg',
     );

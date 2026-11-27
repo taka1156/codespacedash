@@ -1,4 +1,4 @@
-// CodespaceDash Service Worker
+// QuotaDash Service Worker
 // 役割はプッシュ通知の表示とクリック時の遷移だけ。
 // データはキャッシュしない（認証付きのAPIレスポンスを端末に残さないため）。
 
@@ -21,7 +21,7 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  const title = data.title || 'CodespaceDash';
+  const title = data.title || 'QuotaDash';
   const tasks = [];
 
   // アプリアイコンのバッジ（つけっぱなしの台数）

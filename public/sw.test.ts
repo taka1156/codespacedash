@@ -89,7 +89,7 @@ describe('sw.js', () => {
       handlers.push(e);
       await e.done();
       expect(sw.registration.showNotification).toHaveBeenCalledWith(
-        'CodespaceDash',
+        'QuotaDash',
         expect.objectContaining({
           body: '',
           tag: 'codespacedash',
@@ -103,7 +103,7 @@ describe('sw.js', () => {
       handlers.push(e);
       await e.done();
       expect(sw.registration.showNotification).toHaveBeenCalledWith(
-        'CodespaceDash',
+        'QuotaDash',
         expect.objectContaining({ body: 'plain text' }),
       );
     });
