@@ -1,4 +1,29 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"]
+  "extends": ["config:recommended"],
+  "baseBranchPatterns": ["develop"],
+  "timezone": "Asia/Tokyo",
+  "schedule": ["* 20-23 * * 5"],
+  "prHourlyLimit": 0,
+  "minimumReleaseAge": "3 days",
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["* 20-23 * * 5"]
+  },
+  "packageRules": [
+    // テストが拡充できたら、下のブロックのコメントを外してパッチ版を自動マージする
+    // {
+    //   "matchUpdateTypes": ["patch"],
+    //   // 0.x 系はパッチ版でも破壊的変更が入りやすいので除外
+    //   "matchCurrentVersion": "!/^0/",
+    //   "automerge": true
+    //   // PRを作らずブランチのCIが通ったら直接マージする場合は有効化（PR通知が減る）
+    //   // , "automergeType": "branch"
+    // }
+  ]
 }
