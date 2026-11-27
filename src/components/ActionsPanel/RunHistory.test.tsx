@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WorkflowRun } from '@/lib/types';
 import { ago, NOW, run } from '@/testing/fixtures';
@@ -133,6 +133,67 @@ describe('RunHistory', () => {
     it('待機中は出さない', () => {
       render(<RunHistory runs={ok([run({ status: 'queued' })])} />);
       expect(items()[0].textContent?.endsWith('#7')).toBe(true);
+    });
+  });
+
+  describe('private / public の切り替え', () => {
+    const tab = (name: RegExp) => screen.getByRole('tab', { name });
+    const mixed = () =>
+      ok([
+        run({ id: 1, repo: 'me/pub', title: 'pub ok' }),
+        run({
+          id: 2,
+          repo: 'me/priv',
+          private: true,
+          title: 'priv ng',
+          conclusion: 'failure',
+        }),
+        run({ id: 3, repo: 'me/priv', private: true, title: 'priv ok' }),
+      ]);
+
+    it('件数付きのタブを出し、最新の実行がある側を開く', () => {
+      render(<RunHistory runs={mixed()} />);
+      expect(tab(/private \(2\)/)).toHaveAttribute('aria-selected', 'false');
+      expect(tab(/public \(1\)/)).toHaveAttribute('aria-selected', 'true');
+      expect(items()).toHaveLength(1);
+      expect(items()[0]).toHaveTextContent('pub ok');
+    });
+
+    it('最新が private なら private を開く', () => {
+      render(
+        <RunHistory
+          runs={ok([run({ id: 2, private: true }), run({ id: 1 })])}
+        />,
+      );
+      expect(tab(/private/)).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('実行がなければ private を開く', () => {
+      render(<RunHistory runs={ok([])} />);
+      expect(tab(/private \(0\)/)).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('切り替えると、その側の実行と件数を出す', () => {
+      const { container } = render(<RunHistory runs={mixed()} />);
+      expect(container).not.toHaveTextContent('1 失敗');
+      fireEvent.click(tab(/private/));
+      expect(items().map((a) => a.textContent)).toEqual([
+        expect.stringContaining('priv ng'),
+        expect.stringContaining('priv ok'),
+      ]);
+      expect(container).toHaveTextContent('実行履歴 · 1 失敗');
+    });
+
+    it('見ていない側で失敗していれば、そのタブに点を出す', () => {
+      render(<RunHistory runs={mixed()} />);
+      expect(tab(/private/)).toContainElement(screen.getByTitle('要確認'));
+      fireEvent.click(tab(/private/));
+      expect(screen.queryByTitle('要確認')).toBeNull();
+    });
+
+    it('取れなかったときはタブを出さない', () => {
+      render(<RunHistory runs={{ status: 'error', message: 'x' }} />);
+      expect(screen.queryByRole('tablist')).toBeNull();
     });
   });
 });

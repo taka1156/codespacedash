@@ -25,7 +25,7 @@ export function actionsQuota(
   if (!summary) {
     return null;
   }
-  // 実行時間（minutes）の金額だけを合計。公開リポジトリの実行は無料なので含まれない
+  // 実行時間（minutes）の金額だけを合計。公開リポジトリの無料分はサーバー側で除いてある
   const usedUsd = summary.usageItems
     .filter(
       (i) => i.product.toLowerCase() === 'actions' && i.unitType === 'minutes',

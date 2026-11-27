@@ -62,6 +62,7 @@ export const codespace = (p: Partial<Codespace> = {}): Codespace => ({
 export const run = (p: Partial<WorkflowRun> = {}): WorkflowRun => ({
   id: 1,
   repo: 'me/app',
+  private: false,
   workflowName: 'CI',
   title: 'feat: x',
   branch: 'main',
