@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import { useState } from 'react';
+import { fmtAgo } from '@/lib/format';
 import type { SectionState, WorkflowRun } from '@/lib/types';
 import { PanelTabs } from '../shared/PanelTabs/PanelTabs';
 import { StatusNote } from '../shared/StatusNote/StatusNote';
@@ -60,20 +61,6 @@ const ICON: Record<Kind, { cls: string; char: string; label: string }> = {
   neutral: { cls: iconNeutral, char: '–', label: 'キャンセル/スキップ' },
   running: { cls: iconRunning, char: '', label: '実行中' },
   queued: { cls: iconQueued, char: '•', label: '待機中' },
-};
-
-const fmtAgo = (iso: string) => {
-  const min = (Date.now() - new Date(iso).getTime()) / 60_000;
-  if (min < 1) {
-    return 'たった今';
-  }
-  if (min < 60) {
-    return `${Math.floor(min)}分前`;
-  }
-  if (min < 1440) {
-    return `${Math.floor(min / 60)}時間前`;
-  }
-  return `${Math.floor(min / 1440)}日前`;
 };
 
 const fmtDuration = (r: WorkflowRun) => {

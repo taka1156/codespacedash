@@ -19,6 +19,7 @@ import {
 } from '@/lib/plans';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
 import { Icon } from '../shared/Icon/Icon';
+import { FavoritesTab } from './FavoritesTab';
 import {
   actions,
   control,
@@ -44,7 +45,7 @@ interface Props {
   onChangeDebug: (patch: Partial<DebugSettings>) => void;
 }
 
-type Tab = 'general' | 'debug';
+type Tab = 'general' | 'favorites' | 'debug';
 
 const STATE_LABEL: Record<DebugSectionState, string> = {
   '': '実データどおり',
@@ -351,6 +352,7 @@ export const SettingsMenu = (props: Props) => {
 
   const TABS: { key: Tab; label: string }[] = [
     { key: 'general', label: '設定' },
+    { key: 'favorites', label: 'お気に入り' },
     { key: 'debug', label: settings.debug.enabled ? 'デバッグ ●' : 'デバッグ' },
   ];
 
@@ -396,6 +398,11 @@ export const SettingsMenu = (props: Props) => {
           >
             {current === 'general' ? (
               <GeneralTab {...props} />
+            ) : current === 'favorites' ? (
+              <FavoritesTab
+                favorites={settings.favorites}
+                onChange={(favorites) => props.onChange({ favorites })}
+              />
             ) : (
               <DebugTab debug={settings.debug} onChangeDebug={onChangeDebug} />
             )}

@@ -1,9 +1,17 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useDashboard } from '@/hooks/useDashboard';
+import { usePulls } from '@/hooks/usePulls';
 import { usePush } from '@/hooks/usePush';
 import type { DashboardResponse } from '@/lib/types';
-import { build, buildsSummary, dashboard, NOW, run } from '@/testing/fixtures';
+import {
+  build,
+  buildsSummary,
+  dashboard,
+  NOW,
+  repoPulls,
+  run,
+} from '@/testing/fixtures';
 import { setPreview } from '@/testing/previewMock';
 import { DashboardPage } from './DashboardPage';
 
@@ -13,6 +21,10 @@ vi.mock('@/lib/preview', () =>
 );
 vi.mock('@/hooks/useDashboard', () => ({ useDashboard: vi.fn() }));
 vi.mock('@/hooks/usePush', () => ({ usePush: vi.fn() }));
+vi.mock('@/hooks/usePulls', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/hooks/usePulls')>()),
+  usePulls: vi.fn(),
+}));
 
 const fetchAll = vi.fn();
 const stopCodespace = vi.fn(async () => {});
@@ -29,6 +41,20 @@ const mockDashboard = (p: Partial<ReturnType<typeof useDashboard>> = {}) =>
     ...p,
   });
 
+const fetchPulls = vi.fn(async () => {});
+
+const mockPulls = (p: Partial<ReturnType<typeof usePulls>> = {}) =>
+  vi.mocked(usePulls).mockReturnValue({
+    data: null,
+    loading: false,
+    error: null,
+    fetchPulls,
+    ...p,
+  });
+
+const saveSettings = (s: object) =>
+  localStorage.setItem('codespacedash:settings', JSON.stringify(s));
+
 const tab = (name: RegExp) => screen.getByRole('tab', { name });
 const headings = () =>
   screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
@@ -36,6 +62,8 @@ const headings = () =>
 beforeEach(() => {
   vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
   fetchAll.mockReset();
+  fetchPulls.mockReset();
+  mockPulls();
   vi.mocked(usePush).mockReturnValue({
     status: 'loading',
     busy: false,
@@ -198,6 +226,7 @@ describe('DashboardPage', () => {
     render(<DashboardPage />);
     fireEvent.click(screen.getByRole('button', { name: '更新' }));
     expect(fetchAll).toHaveBeenCalled();
+    expect(fetchPulls).toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: '停止' }));
     expect(stopCodespace).toHaveBeenCalledWith('cs-1');
   });
@@ -217,6 +246,49 @@ describe('DashboardPage', () => {
     expect(screen.getByText('DEBUG')).toBeInTheDocument();
   });
 
+  describe('PR タブ', () => {
+    it('お気に入りの PR を取り、合計をタブに出してアコーディオンで表示する', () => {
+      saveSettings({ favorites: ['me/app'] });
+      mockPulls({
+        data: {
+          pulls: { status: 'ok', data: [repoPulls({ totalCount: 4 })] },
+          fetchedAt: NOW.toISOString(),
+        },
+      });
+      render(<DashboardPage />);
+      expect(usePulls).toHaveBeenCalledWith(['me/app']);
+      fireEvent.click(tab(/PR \(4\)/));
+      expect(headings()).toEqual(['⇄ オープンな PR']);
+      expect(screen.getByRole('button', { name: /me\/app/ })).toHaveAttribute(
+        'aria-expanded',
+        'true',
+      );
+    });
+
+    it('取れていなければタブに件数を出さず、通信エラーはパネルに出す', () => {
+      saveSettings({ favorites: ['me/app'], serviceTab: 'pulls' });
+      mockPulls({ error: 'offline' });
+      render(<DashboardPage />);
+      expect(tab(/PR/)).toHaveTextContent(/^⇄ PR$/);
+      expect(screen.getByText('offline')).toBeInTheDocument();
+    });
+
+    it('ダッシュボードが取れていなくても PR タブは出す', () => {
+      saveSettings({ serviceTab: 'pulls' });
+      mockDashboard({ data: null, loading: true });
+      render(<DashboardPage />);
+      expect(
+        screen.getByText(/お気に入りのリポジトリがありません/),
+      ).toBeInTheDocument();
+    });
+
+    it('更新ボタンで PR も取り直し、PR の取得中も更新中にする', () => {
+      mockPulls({ loading: true });
+      render(<DashboardPage />);
+      expect(screen.getByRole('button', { name: '更新' })).toBeDisabled();
+    });
+  });
+
   it('静的プレビューではその旨を出す', () => {
     setPreview(true);
     // 保存した設定を読むときに、静的プレビューならデバッグをオンにする
@@ -226,5 +298,10 @@ describe('DashboardPage', () => {
     expect(screen.getByText(/静的プレビューです/)).toBeInTheDocument();
     // デバッグの設定から疑似データを作って出す
     expect(headings()).toEqual(['⬡ Codespaces', 'ϟ Actions', '✦ Copilot']);
+    // PR タブも疑似のお気に入りと PR で出す
+    fireEvent.click(tab(/PR \(\d+\)/));
+    expect(
+      screen.getByRole('button', { name: /example\/web-app/ }),
+    ).toBeInTheDocument();
   });
 });

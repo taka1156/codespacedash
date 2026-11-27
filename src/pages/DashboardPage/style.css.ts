@@ -36,7 +36,7 @@ export const dashboardGrid = style({
 });
 
 export const serviceTabs = style({
-  maxWidth: 360,
+  maxWidth: 480,
   marginBottom: 20,
 });
 

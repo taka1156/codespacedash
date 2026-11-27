@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { EMPTY_DEBUG, SAMPLE_DEBUG, type Settings } from '@/hooks/useSettings';
+import { api } from '@/lib/api';
 import type { ResolvedPlans } from '@/lib/debug';
 import { setPreview } from '@/testing/previewMock';
 import { SettingsMenu } from './SettingsMenu';
@@ -9,12 +10,17 @@ import { tabDebugOn } from './style.css';
 vi.mock('@/lib/preview', () =>
   import('@/testing/previewMock').then((m) => m.previewModule),
 );
+vi.mock('@/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/api')>()),
+  api: { get: vi.fn(), post: vi.fn(), delete: vi.fn() },
+}));
 
 const base: Settings = {
   githubPlan: 'auto',
   copilotPlan: 'pro',
   workersPlan: 'auto',
   serviceTab: 'github',
+  favorites: [],
   debug: EMPTY_DEBUG,
 };
 
@@ -97,7 +103,7 @@ describe('SettingsMenu', () => {
     it('設定タブから始まり、デバッグタブに切り替えられる', () => {
       menu();
       open();
-      const [general, debug] = screen.getAllByRole('tab');
+      const [general, , debug] = screen.getAllByRole('tab');
       expect(general).toHaveAttribute('aria-selected', 'true');
       expect(screen.getByRole('tabpanel')).toHaveAttribute(
         'aria-labelledby',
@@ -113,6 +119,19 @@ describe('SettingsMenu', () => {
 
       fireEvent.click(general);
       expect(screen.queryByRole('checkbox')).toBeNull();
+    });
+
+    it('お気に入りタブで変えたお気に入りを設定として渡す', async () => {
+      vi.mocked(api.get).mockResolvedValue({
+        repos: { status: 'ok', data: [] },
+      });
+      const { onChange } = menu({ favorites: ['me/app'] });
+      open();
+      fireEvent.click(screen.getByRole('tab', { name: 'お気に入り' }));
+      expect(api.get).toHaveBeenCalledWith('/repos');
+      fireEvent.click(screen.getByRole('button', { name: 'me/app を削除' }));
+      expect(onChange).toHaveBeenCalledWith({ favorites: [] });
+      await act(async () => {});
     });
 
     it('デバッグ中はタブに印を付ける', () => {
