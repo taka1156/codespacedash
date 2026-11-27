@@ -18,6 +18,7 @@ import {
   WORKERS_PLANS,
 } from '@/lib/plans';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
+import { Icon } from '../shared/Icon/Icon';
 import {
   actions,
   control,
@@ -362,8 +363,9 @@ export const SettingsMenu = (props: Props) => {
         aria-expanded={open}
         aria-controls={panelId}
         title="設定"
+        aria-label="設定"
       >
-        ⚙
+        <Icon name="settings" />
       </button>
       {open && (
         <div id={panelId} className={popover} role="dialog" aria-label="設定">

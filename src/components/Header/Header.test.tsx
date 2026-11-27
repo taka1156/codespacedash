@@ -105,7 +105,7 @@ describe('Header', () => {
 
   it('更新ボタンで取り直し、取得中は押せずにアイコンを回す', () => {
     const { onRefresh } = header();
-    const btn = screen.getByRole('button', { name: '↻' });
+    const btn = screen.getByRole('button', { name: '更新' });
     expect(btn.firstElementChild).not.toHaveClass(btnRefreshSpinning);
     fireEvent.click(btn);
     expect(onRefresh).toHaveBeenCalled();
@@ -113,7 +113,7 @@ describe('Header', () => {
 
   it('取得中は更新ボタンを押せない', () => {
     header({ loading: true });
-    const btn = screen.getByRole('button', { name: '↻' });
+    const btn = screen.getByRole('button', { name: '更新' });
     expect(btn).toBeDisabled();
     expect(btn.firstElementChild).toHaveClass(btnRefreshSpinning);
   });
@@ -144,7 +144,7 @@ describe('Header', () => {
 
     it('オフなら有効化ボタン', () => {
       header();
-      const btn = screen.getByRole('button', { name: '🔕通知を有効化' });
+      const btn = screen.getByRole('button', { name: '通知を有効化' });
       fireEvent.click(btn);
       expect(push.subscribe).toHaveBeenCalled();
     });
@@ -154,7 +154,7 @@ describe('Header', () => {
       header();
       fireEvent.click(screen.getByRole('button', { name: 'テスト通知' }));
       expect(push.sendTest).toHaveBeenCalled();
-      fireEvent.click(screen.getByRole('button', { name: '🔔通知オン' }));
+      fireEvent.click(screen.getByRole('button', { name: '通知オン' }));
       expect(push.unsubscribe).toHaveBeenCalled();
     });
 
@@ -171,15 +171,20 @@ describe('Header', () => {
     );
 
     it.each([
-      ['needs-install', '📲', 'ホーム画面に追加'],
-      ['unsupported', '🔕', 'このブラウザはプッシュ通知に対応していません'],
-      ['disabled', '🔕', 'サーバー側でプッシュ通知が設定されていません'],
-      ['denied', '🔕', 'ブラウザの設定で通知がブロックされています'],
+      ['needs-install', 'smartphone', 'ホーム画面に追加'],
+      [
+        'unsupported',
+        'bellOff',
+        'このブラウザはプッシュ通知に対応していません',
+      ],
+      ['disabled', 'bellOff', 'サーバー側でプッシュ通知が設定されていません'],
+      ['denied', 'bellOff', 'ブラウザの設定で通知がブロックされています'],
     ] as const)('%s なら理由を案内する', (status, icon, hint) => {
       mockPush(status);
       const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
       header();
-      const btn = screen.getByRole('button', { name: `${icon}通知` });
+      const btn = screen.getByRole('button', { name: '通知' });
+      expect(btn.querySelector(`svg[data-icon="${icon}"]`)).not.toBeNull();
       expect(btn.getAttribute('title')).toContain(hint);
       fireEvent.click(btn);
       expect(alert).toHaveBeenCalledWith(expect.stringContaining(hint));

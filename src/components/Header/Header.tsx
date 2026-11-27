@@ -5,9 +5,11 @@ import type { ResolvedPlans } from '@/lib/debug';
 import { asset, IS_STATIC_PREVIEW } from '@/lib/preview';
 import type { GithubUser } from '@/lib/types';
 import { SettingsMenu } from '../SettingsMenu/SettingsMenu';
+import { Icon } from '../shared/Icon/Icon';
 import {
   avatar,
   btnGhost,
+  btnIconText,
   btnNotifyOn,
   btnRefresh,
   btnRefreshSpinning,
@@ -19,7 +21,6 @@ import {
   hideOnMobile,
   lastFetchedStyle,
   pushError,
-  refreshIcon,
   userInfo,
   username,
 } from './style.css';
@@ -63,12 +64,13 @@ const PushButton = () => {
         </button>
         <button
           type="button"
-          className={clsx(btnGhost, btnNotifyOn)}
+          className={clsx(btnGhost, btnIconText, btnNotifyOn)}
           onClick={unsubscribe}
           disabled={busy}
           title="この端末の通知をオフにする"
         >
-          🔔<span className={hideOnMobile}> 通知オン</span>
+          <Icon name="bell" />
+          <span className={hideOnMobile}>通知オン</span>
         </button>
         {error && <div className={pushError}>{error}</div>}
       </>
@@ -80,12 +82,13 @@ const PushButton = () => {
       <>
         <button
           type="button"
-          className={btnGhost}
+          className={clsx(btnGhost, btnIconText)}
           onClick={subscribe}
           disabled={busy}
           title="この端末の通知を有効にする"
         >
-          🔕<span className={hideOnMobile}> 通知を有効化</span>
+          <Icon name="bellOff" />
+          <span className={hideOnMobile}>通知を有効化</span>
         </button>
         {error && <div className={pushError}>{error}</div>}
       </>
@@ -95,13 +98,13 @@ const PushButton = () => {
   return (
     <button
       type="button"
-      className={btnGhost}
+      className={clsx(btnGhost, btnIconText)}
       style={{ opacity: 0.6 }}
       title={PUSH_HINT[status]}
       onClick={() => alert(PUSH_HINT[status])}
     >
-      {status === 'needs-install' ? '📲' : '🔕'}
-      <span className={hideOnMobile}> 通知</span>
+      <Icon name={status === 'needs-install' ? 'smartphone' : 'bellOff'} />
+      <span className={hideOnMobile}>通知</span>
     </button>
   );
 };
@@ -139,11 +142,10 @@ export const Header = ({
         onClick={onRefresh}
         disabled={loading}
         title="更新"
+        aria-label="更新"
       >
-        {/* ボタンではなくアイコンだけを回す */}
-        <span className={clsx(refreshIcon, loading && btnRefreshSpinning)}>
-          ↻
-        </span>
+        {/* ボタンではなくアイコンだけを回す（SVG の中心が軸） */}
+        <Icon name="refresh" className={clsx(loading && btnRefreshSpinning)} />
       </button>
       {!IS_STATIC_PREVIEW && <PushButton />}
       <SettingsMenu

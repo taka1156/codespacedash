@@ -93,7 +93,7 @@ export const btnRefresh = style({
   borderRadius: '8px',
   background: 'var(--bg-card)',
   color: 'var(--text-muted)',
-  fontSize: '1.1rem',
+  fontSize: '16px',
   transition: 'color 0.2s, background 0.2s',
   display: 'flex',
   alignItems: 'center',
@@ -110,11 +110,6 @@ const spin = keyframes({
   to: {
     transform: 'rotate(360deg)',
   },
-});
-
-export const refreshIcon = style({
-  display: 'inline-block',
-  lineHeight: 1,
 });
 
 export const btnRefreshSpinning = style({
@@ -165,6 +160,18 @@ export const btnGhost = style({
       cursor: 'default',
     },
   },
+});
+
+/** アイコン + 文字のボタン。アイコンと文字の縦位置を揃える */
+export const btnIconText = style({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  lineHeight: 1.4,
+});
+
+globalStyle(`${btnIconText} svg`, {
+  fontSize: '14px',
 });
 
 export const btnNotifyOn = style({

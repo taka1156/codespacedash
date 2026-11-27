@@ -43,7 +43,8 @@ const menu = (settings: Partial<Settings> = {}) => {
   return { ...r, onChange, onChangeDebug };
 };
 
-const open = () => fireEvent.click(screen.getByRole('button', { name: '⚙' }));
+const open = () =>
+  fireEvent.click(screen.getByRole('button', { name: '設定' }));
 const toDebug = () =>
   fireEvent.click(screen.getByRole('tab', { name: /デバッグ/ }));
 
@@ -51,7 +52,7 @@ describe('SettingsMenu', () => {
   describe('開閉', () => {
     it('ボタンで開閉する', () => {
       menu();
-      const trigger = screen.getByRole('button', { name: '⚙' });
+      const trigger = screen.getByRole('button', { name: '設定' });
       expect(trigger).toHaveAttribute('aria-expanded', 'false');
       expect(screen.queryByRole('dialog')).toBeNull();
 

@@ -66,7 +66,7 @@ export const DashboardPage = () => {
         {IS_STATIC_PREVIEW && (
           <div className={previewBanner}>
             静的プレビューです。表示はすべて疑似データで、GitHub や Cloudflare
-            には接続していません。右上の ⚙
+            には接続していません。右上の設定（歯車）
             →「デバッグ」で数値やプラン、取得状態を変えられます。
           </div>
         )}

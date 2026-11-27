@@ -10,7 +10,7 @@ export const trigger = style({
   borderRadius: 8,
   background: 'var(--bg-card)',
   color: 'var(--text-muted)',
-  fontSize: '1rem',
+  fontSize: '16px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

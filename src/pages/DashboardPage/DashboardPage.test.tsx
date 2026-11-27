@@ -196,7 +196,7 @@ describe('DashboardPage', () => {
   it('更新ボタンと停止ボタンをつなぐ', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<DashboardPage />);
-    fireEvent.click(screen.getByRole('button', { name: '↻' }));
+    fireEvent.click(screen.getByRole('button', { name: '更新' }));
     expect(fetchAll).toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: '停止' }));
     expect(stopCodespace).toHaveBeenCalledWith('cs-1');
@@ -204,7 +204,7 @@ describe('DashboardPage', () => {
 
   it('設定を変えるとプランに反映する', () => {
     render(<DashboardPage />);
-    fireEvent.click(screen.getByRole('button', { name: '⚙' }));
+    fireEvent.click(screen.getByRole('button', { name: '設定' }));
     fireEvent.change(screen.getByLabelText(/^GitHub/), {
       target: { value: 'pro' },
     });
