@@ -130,7 +130,7 @@ api.delete('/push/subscriptions', async (c) => {
 
 api.post('/push/test', async (c) => {
   const result = await sendToAll(c.env, {
-    title: 'CodespaceDash',
+    title: 'QuotaDash',
     body: 'テスト通知です。この端末で通知を受け取れます。',
     url: '/',
     tag: 'test',

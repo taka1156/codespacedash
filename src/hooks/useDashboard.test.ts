@@ -41,7 +41,7 @@ beforeEach(() => {
     setAppBadge: badge.set,
     clearAppBadge: badge.clear,
   });
-  document.title = 'CodespaceDash';
+  document.title = 'QuotaDash';
 });
 afterEach(() => {
   const nav = navigator as { setAppBadge?: unknown; clearAppBadge?: unknown };
@@ -182,28 +182,28 @@ describe('useDashboard', () => {
       );
       renderHook(() => useDashboard());
       await flush();
-      expect(document.title).toBe('(4) CodespaceDash');
+      expect(document.title).toBe('(4) QuotaDash');
       expect(badge.set).toHaveBeenCalledWith(2);
       expect(badge.clear).not.toHaveBeenCalled();
     });
 
     it('稼働中がなければタイトルの数字とバッジを消す', async () => {
-      document.title = '(3) CodespaceDash';
+      document.title = '(3) QuotaDash';
       get.mockResolvedValue(
         withCs({ status: 'ok', data: [codespace({ state: 'Shutdown' })] }),
       );
       renderHook(() => useDashboard());
       await flush();
-      expect(document.title).toBe('CodespaceDash');
+      expect(document.title).toBe('QuotaDash');
       expect(badge.clear).toHaveBeenCalled();
     });
 
     it('一覧が取れなければ何も変えない', async () => {
-      document.title = '(3) CodespaceDash';
+      document.title = '(3) QuotaDash';
       get.mockResolvedValue(withCs({ status: 'error', message: 'x' }));
       renderHook(() => useDashboard());
       await flush();
-      expect(document.title).toBe('(3) CodespaceDash');
+      expect(document.title).toBe('(3) QuotaDash');
       expect(badge.set).not.toHaveBeenCalled();
       expect(badge.clear).not.toHaveBeenCalled();
     });

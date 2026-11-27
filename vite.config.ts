@@ -15,7 +15,7 @@ const stripManifest = (): Plugin => ({
 export default defineConfig(({ mode }) => {
   const isPages = mode === PAGES_MODE;
   return {
-    base: isPages ? (process.env.PAGES_BASE ?? '/codespacedash/') : '/',
+    base: isPages ? (process.env.PAGES_BASE ?? '/quotadash/') : '/',
     resolve: {
       alias: {
         '@': resolve(import.meta.dirname, './src'),

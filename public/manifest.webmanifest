@@ -1,7 +1,7 @@
 {
-  "name": "CodespaceDash",
-  "short_name": "CodespaceDash",
-  "description": "GitHub Codespaces の稼働状況と消し忘れ通知",
+  "name": "QuotaDash",
+  "short_name": "QuotaDash",
+  "description": "GitHub と Cloudflare の利用枠をまとめて確認するダッシュボード",
   "id": "/",
   "start_url": "/",
   "scope": "/",

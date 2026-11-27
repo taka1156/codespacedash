@@ -1,7 +1,9 @@
-<img src="public/logo.svg" alt="codespacedash" width="100%" height="100%">
+<img src="public/logo.svg" alt="QuotaDash" width="100%" height="100%">
 
-GitHub（Codespaces・Actions・Copilot）と Cloudflare（Workers Builds・無料枠）の利用状況を、タブで切り替えて可視化するダッシュボード。
-Codespaces の消し忘れを PWA のプッシュ通知で知らせます。
+**QuotaDash** は、GitHub（Codespaces・Actions・Copilot）と Cloudflare（Workers Builds・無料枠）の利用枠をまとめて確認するダッシュボードです。
+タブで切り替えて使用量と残りを可視化し、Codespaces の消し忘れは PWA のプッシュ通知で知らせます。
+
+> 旧称 CodespaceDash。Codespaces 専用ではなくなったため改名しました。Worker 名（`codespacedash`）は互換性のためそのままです。
 
 ## 構成
 
