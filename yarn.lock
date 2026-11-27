@@ -1836,9 +1836,9 @@ hasown@^2.0.2, hasown@^2.0.4:
     function-bind "^1.1.2"
 
 hono@^4.13.16:
-  version "4.13.20"
-  resolved "https://registry.yarnpkg.com/hono/-/hono-4.13.20.tgz#52194d4d764c07f74648c7c8d5c739751643628f"
-  integrity sha512-xo6gecEJQ+CjTtOUUbcLHE8CdRKMeF4qITe+DT+OhFnSUmZR/ZBa9XavAfiGh4HlukmlaHFdaK4dz5tkTYFNmA==
+  version "4.13.23"
+  resolved "https://registry.yarnpkg.com/hono/-/hono-4.13.23.tgz#de26c7b53684a338cf688046f5db346cf8da3432"
+  integrity sha512-OS90dj7dcsftEEWCOef8jRbnHE5lbrOq0hNRqjSyPsOnaGZvvfof1KS05hQNb4kUOCfDq1mG3PmHoX37DMnHQg==
 
 html-encoding-sniffer@^7.0.0:
   version "7.0.0"
