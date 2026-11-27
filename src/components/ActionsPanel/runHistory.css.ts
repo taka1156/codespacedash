@@ -133,3 +133,8 @@ export const sectionNote = style({
   color: 'var(--text-dim)',
   fontFamily: 'var(--font-sans)',
 });
+
+/** 実行履歴の private / public 切り替え（パネル内なので小さめ） */
+export const visibilityTabs = style({
+  marginBottom: 8,
+});

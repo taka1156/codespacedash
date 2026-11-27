@@ -160,6 +160,8 @@ const mockRuns = (): WorkflowRun[] =>
   ).map(([repo, wf, title, status, conclusion, min], i) => ({
     id: 1000 + i,
     repo,
+    // 切り替えタブの確認用に api-server だけ private にする
+    private: repo === 'example/api-server',
     workflowName: wf,
     title,
     branch: 'main',

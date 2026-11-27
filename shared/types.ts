@@ -76,6 +76,8 @@ export interface PremiumRequestUsage {
 export interface WorkflowRun {
   id: number;
   repo: string;
+  /** private リポジトリの実行か（public は Actions の無料枠を使わない） */
+  private: boolean;
   workflowName: string;
   title: string;
   branch: string | null;

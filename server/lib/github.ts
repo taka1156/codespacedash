@@ -169,10 +169,114 @@ export const getBillingSummary = async (
     env,
     `/users/${encodeURIComponent(login)}/settings/billing/usage/summary?${params}`,
   );
-  return {
+  const summary = {
     timePeriod: res.timePeriod,
     usageItems: (res.usageItems ?? []).map(pickItem),
   };
+  return withoutPublicActions(env, login, params, summary);
+};
+
+// ── Actions：公開リポジトリの実行時間を除く ──
+// summary では公開リポジトリの分も gross に入り、割引（discount）で相殺されている。
+// 無料枠の割引と区別できないので、リポジトリ名付きの明細から公開リポジトリの分を除いて集計し直す。
+
+interface RawUsageReportItem {
+  product: string;
+  sku: string;
+  unitType: string;
+  pricePerUnit: number;
+  quantity: number;
+  grossAmount: number;
+  discountAmount: number;
+  netAmount: number;
+  repositoryName?: string;
+}
+
+const isActionsMinutes = (i: { product: string; unitType: string }) =>
+  i.product.toLowerCase() === 'actions' && i.unitType === 'minutes';
+
+const PUBLIC_REPOS_PAGE = 100;
+
+/** 自分の公開リポジトリ名（小文字）。/users/{login}/repos は公開分だけを返す */
+const listPublicRepos = async (env: Env, login: string) => {
+  const names = new Set<string>();
+  for (let page = 1; page <= 10; page++) {
+    const repos = await gh<{ full_name: string }[]>(
+      env,
+      `/users/${encodeURIComponent(login)}/repos?type=owner&per_page=${PUBLIC_REPOS_PAGE}&page=${page}`,
+    );
+    for (const r of repos) {
+      names.add(r.full_name.toLowerCase());
+    }
+    if (repos.length < PUBLIC_REPOS_PAGE) {
+      break;
+    }
+  }
+  return names;
+};
+
+export const withoutPublicActions = async (
+  env: Env,
+  login: string,
+  params: URLSearchParams,
+  summary: BillingUsageSummary,
+): Promise<BillingUsageSummary> => {
+  if (!summary.usageItems.some(isActionsMinutes)) {
+    return summary;
+  }
+  try {
+    const [report, publicRepos] = await Promise.all([
+      gh<{ usageItems?: RawUsageReportItem[] }>(
+        env,
+        `/users/${encodeURIComponent(login)}/settings/billing/usage?${params}`,
+      ),
+      listPublicRepos(env, login),
+    ]);
+
+    const bySku = new Map<string, BillingUsageItem>();
+    for (const i of report.usageItems ?? []) {
+      // 課金された分（公開リポジトリの larger runner など）は残す
+      const freePublic =
+        i.netAmount === 0 &&
+        publicRepos.has((i.repositoryName ?? '').toLowerCase());
+      if (!isActionsMinutes(i) || freePublic) {
+        continue;
+      }
+      const cur = bySku.get(i.sku) ?? {
+        product: i.product,
+        sku: i.sku,
+        unitType: i.unitType,
+        pricePerUnit: i.pricePerUnit,
+        grossQuantity: 0,
+        grossAmount: 0,
+        discountQuantity: 0,
+        discountAmount: 0,
+        netQuantity: 0,
+        netAmount: 0,
+      };
+      const discountRatio =
+        i.grossAmount > 0 ? i.discountAmount / i.grossAmount : 0;
+      cur.grossQuantity += i.quantity;
+      cur.grossAmount += i.grossAmount;
+      cur.discountQuantity += i.quantity * discountRatio;
+      cur.discountAmount += i.discountAmount;
+      cur.netQuantity += i.quantity * (1 - discountRatio);
+      cur.netAmount += i.netAmount;
+      bySku.set(i.sku, cur);
+    }
+
+    return {
+      ...summary,
+      usageItems: [
+        ...summary.usageItems.filter((i) => !isActionsMinutes(i)),
+        ...bySku.values(),
+      ],
+    };
+  } catch (e) {
+    // 明細が取れなければ summary のまま（公開分も含むので多めに出る＝安全側）
+    console.warn('actions usage report failed', e);
+    return summary;
+  }
 };
 
 export const getPremiumRequests = async (
@@ -200,6 +304,7 @@ export const getPremiumRequests = async (
 
 interface RawRepo {
   full_name: string;
+  private: boolean;
   archived: boolean;
   disabled?: boolean;
 }
@@ -221,12 +326,14 @@ interface RawRun {
 
 const RUNS_REPO_LIMIT = 15;
 const RUNS_PER_REPO = 5;
+/** private / public それぞれの件数（タブで切り替えて表示する） */
 const RUNS_LIMIT = 10;
 const RUNS_CACHE_SEC = 60;
 
-const toRun = (repo: string, r: RawRun): WorkflowRun => ({
+const toRun = (repo: RawRepo, r: RawRun): WorkflowRun => ({
   id: r.id,
-  repo,
+  repo: repo.full_name,
+  private: repo.private,
   workflowName: r.name ?? 'workflow',
   title: r.display_title,
   branch: r.head_branch,
@@ -257,7 +364,7 @@ const fetchRecentRuns = async (env: Env): Promise<WorkflowRun[]> => {
         env,
         `/repos/${repo.full_name}/actions/runs?per_page=${RUNS_PER_REPO}&exclude_pull_requests=true`,
       );
-      return res.workflow_runs.map((r) => toRun(repo.full_name, r));
+      return res.workflow_runs.map((r) => toRun(repo, r));
     }),
   );
 
@@ -275,13 +382,17 @@ const fetchRecentRuns = async (env: Env): Promise<WorkflowRun[]> => {
       : reason;
   }
 
-  return results
+  const sorted = results
     .flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
     .sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    )
-    .slice(0, RUNS_LIMIT);
+    );
+  // 片方に偏っても、もう片方のタブが空にならないよう種類ごとに上限を取る（順序は新しい順のまま）
+  const priv = sorted.filter((r) => r.private).slice(0, RUNS_LIMIT);
+  const pub = sorted.filter((r) => !r.private).slice(0, RUNS_LIMIT);
+  const keep = new Set([...priv, ...pub]);
+  return sorted.filter((r) => keep.has(r));
 };
 
 // workers.dev では Cache API が効かないので isolate 内のメモリにも持つ

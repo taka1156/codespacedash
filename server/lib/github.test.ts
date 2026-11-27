@@ -339,6 +339,170 @@ describe('getBillingSummary / getPremiumRequests', () => {
   });
 });
 
+describe('getBillingSummary：公開リポジトリの Actions を除く', () => {
+  const p = { year: 2026, month: 11 };
+  const item = (sku: string, p: Record<string, unknown> = {}) => ({
+    product: 'actions',
+    sku,
+    unitType: 'minutes',
+    pricePerUnit: 0.006,
+    grossQuantity: 999,
+    grossAmount: 999,
+    discountQuantity: 0,
+    discountAmount: 0,
+    netQuantity: 0,
+    netAmount: 0,
+    ...p,
+  });
+  const codespaces = item('cs', { product: 'codespaces', unitType: 'hours' });
+  const line = (p: Record<string, unknown>) => ({
+    product: 'Actions',
+    sku: 'actions_linux',
+    unitType: 'minutes',
+    pricePerUnit: 0.006,
+    quantity: 100,
+    grossAmount: 0.6,
+    discountAmount: 0.6,
+    netAmount: 0,
+    repositoryName: 'me/private-app',
+    ...p,
+  });
+  const summary = () =>
+    json({
+      timePeriod: p,
+      usageItems: [item('actions_linux'), codespaces],
+    });
+
+  it('明細から公開リポジトリの無料分を除いて集計し直す', async () => {
+    const publicPage1 = Array.from({ length: 100 }, (_, i) => ({
+      full_name: `me/pub-${i}`,
+    }));
+    routes({
+      '/users/me/settings/billing/usage/summary': summary,
+      '/users/me/settings/billing/usage': () =>
+        json({
+          usageItems: [
+            // 公開リポジトリの無料分（大文字小文字は区別しない）→ 除く
+            line({ repositoryName: 'Me/Pub-0', quantity: 5000 }),
+            line({ repositoryName: 'me/pub-last', quantity: 5000 }),
+            // private の分は合算する
+            line({ quantity: 100 }),
+            line({
+              quantity: 50,
+              grossAmount: 0.3,
+              discountAmount: 0.15,
+              netAmount: 0.15,
+            }),
+            // リポジトリ名がない・金額ゼロの明細も private 扱いで数える
+            line({
+              repositoryName: undefined,
+              quantity: 1,
+              grossAmount: 0,
+              discountAmount: 0,
+            }),
+            // 公開リポジトリでも課金された分（larger runner）→ 残す
+            line({
+              sku: 'actions_linux_4_core',
+              repositoryName: 'me/pub-0',
+              quantity: 10,
+              grossAmount: 0.16,
+              discountAmount: 0,
+              netAmount: 0.16,
+            }),
+            // Actions の実行時間以外は無視
+            line({ product: 'codespaces', unitType: 'hours' }),
+            line({ unitType: 'gigabyte-hours' }),
+          ],
+        }),
+      '/users/me/repos': (url) =>
+        json(
+          url.searchParams.get('page') === '1'
+            ? publicPage1
+            : [{ full_name: 'me/pub-last' }],
+        ),
+    });
+    const { getBillingSummary } = await load();
+    const res = await getBillingSummary(env, 'me', p);
+
+    expect(res.usageItems).toEqual([
+      codespaces,
+      {
+        product: 'Actions',
+        sku: 'actions_linux',
+        unitType: 'minutes',
+        pricePerUnit: 0.006,
+        grossQuantity: 151,
+        grossAmount: expect.closeTo(0.9),
+        discountQuantity: 125,
+        discountAmount: expect.closeTo(0.75),
+        netQuantity: 26,
+        netAmount: expect.closeTo(0.15),
+      },
+      {
+        product: 'Actions',
+        sku: 'actions_linux_4_core',
+        unitType: 'minutes',
+        pricePerUnit: 0.006,
+        grossQuantity: 10,
+        grossAmount: 0.16,
+        discountQuantity: 0,
+        discountAmount: 0,
+        netQuantity: 10,
+        netAmount: 0.16,
+      },
+    ]);
+    const called = fetchMock.mock.calls.map(([u]) => String(u));
+    expect(called).toContain(
+      'https://api.github.com/users/me/settings/billing/usage?year=2026&month=11',
+    );
+    expect(called).toContain(
+      'https://api.github.com/users/me/repos?type=owner&per_page=100&page=2',
+    );
+  });
+
+  it('公開リポジトリは10ページで打ち切る', async () => {
+    routes({
+      '/users/me/settings/billing/usage/summary': summary,
+      '/users/me/settings/billing/usage': () => json({ usageItems: [] }),
+      '/users/me/repos': () =>
+        json(Array.from({ length: 100 }, (_, i) => ({ full_name: `r${i}` }))),
+    });
+    const { getBillingSummary } = await load();
+    await getBillingSummary(env, 'me', p);
+    expect(
+      fetchMock.mock.calls.filter(([u]) => String(u).includes('/repos?')),
+    ).toHaveLength(10);
+  });
+
+  it('明細に usageItems がなければ Actions の実行時間はなし', async () => {
+    routes({
+      '/users/me/settings/billing/usage/summary': summary,
+      '/users/me/settings/billing/usage': () => json({}),
+      '/users/me/repos': () => json([]),
+    });
+    const { getBillingSummary } = await load();
+    expect((await getBillingSummary(env, 'me', p)).usageItems).toEqual([
+      codespaces,
+    ]);
+  });
+
+  it('明細が取れなければ summary のまま返す', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    routes({
+      '/users/me/settings/billing/usage/summary': summary,
+      '/users/me/settings/billing/usage': () => json({}, 403),
+      '/users/me/repos': () => json([]),
+    });
+    const { getBillingSummary } = await load();
+    expect((await getBillingSummary(env, 'me', p)).usageItems).toEqual([
+      item('actions_linux'),
+      codespaces,
+    ]);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+});
+
 describe('listRecentRuns', () => {
   const run = (
     id: number,
@@ -417,6 +581,39 @@ describe('listRecentRuns', () => {
     );
     expect(called).not.toContain('/repos/me/old/actions/runs');
     expect(called).not.toContain('/repos/me/off/actions/runs');
+  });
+
+  it('private / public それぞれ新しい順に10件ずつ残す', async () => {
+    routes({
+      '/user/repos': () =>
+        json([
+          { full_name: 'me/pub', private: false, archived: false },
+          { full_name: 'me/priv', private: true, archived: false },
+        ]),
+      '/repos/me/pub/': () =>
+        json({
+          workflow_runs: Array.from({ length: 15 }, (_, i) =>
+            run(i, `2026-11-${String(10 + i).padStart(2, '0')}T00:00:00Z`),
+          ),
+        }),
+      '/repos/me/priv/': () =>
+        json({
+          workflow_runs: [
+            run(100, '2026-11-01T00:00:00Z'),
+            run(101, '2026-11-02T00:00:00Z'),
+          ],
+        }),
+    });
+    const { listRecentRuns } = await load();
+    const runs = await listRecentRuns(env);
+
+    const pub = runs.filter((r) => !r.private);
+    const priv = runs.filter((r) => r.private);
+    expect(pub.map((r) => r.id)).toEqual([14, 13, 12, 11, 10, 9, 8, 7, 6, 5]);
+    expect(priv.map((r) => r.id)).toEqual([101, 100]);
+    expect(priv[0]).toMatchObject({ repo: 'me/priv', private: true });
+    // 全体も新しい順のまま
+    expect(runs.map((r) => r.id).slice(-2)).toEqual([101, 100]);
   });
 
   it('一部のリポジトリが失敗しても残りを返す', async () => {

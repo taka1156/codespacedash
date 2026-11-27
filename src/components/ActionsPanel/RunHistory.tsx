@@ -1,5 +1,7 @@
 import clsx from 'clsx';
+import { useState } from 'react';
 import type { SectionState, WorkflowRun } from '@/lib/types';
+import { PanelTabs } from '../shared/PanelTabs/PanelTabs';
 import { StatusNote } from '../shared/StatusNote/StatusNote';
 import {
   emptyState,
@@ -18,6 +20,7 @@ import {
   sectionNote,
   time,
   title,
+  visibilityTabs,
   workflow,
 } from './runHistory.css';
 
@@ -91,9 +94,24 @@ interface Props {
   runs: SectionState<WorkflowRun[]>;
 }
 
-/** Actions パネルの下半分：直近の実行履歴 */
+type Visibility = 'private' | 'public';
+
+const hasFailure = (list: WorkflowRun[]) =>
+  list.some((r) => kindOf(r) === 'failure');
+
+/** Actions パネルの下半分：直近の実行履歴（private / public を切り替え） */
 export const RunHistory = ({ runs }: Props) => {
-  const list = runs.status === 'ok' ? runs.data : [];
+  const all = runs.status === 'ok' ? runs.data : [];
+  const byVisibility: Record<Visibility, WorkflowRun[]> = {
+    private: all.filter((r) => r.private),
+    public: all.filter((r) => !r.private),
+  };
+  const [picked, setPicked] = useState<Visibility | null>(null);
+  // 選ぶまでは、いちばん新しい実行がある側を開く
+  const current: Visibility =
+    picked ?? (all.length > 0 && !all[0].private ? 'public' : 'private');
+  const list = byVisibility[current];
+
   const failed = list.filter((r) => kindOf(r) === 'failure').length;
   const running = list.filter((r) =>
     ['running', 'queued'].includes(kindOf(r)),
@@ -105,12 +123,31 @@ export const RunHistory = ({ runs }: Props) => {
     .filter(Boolean)
     .join(' / ');
 
+  const tabItem = (key: Visibility, label: string) => ({
+    key,
+    label: `${label} (${byVisibility[key].length})`,
+    // 見ていない側で失敗していれば赤い点
+    alert: key !== current && hasFailure(byVisibility[key]),
+  });
+
   return (
     <div className={section}>
       <p className={sectionHead}>
         実行履歴{counts ? ` · ${counts}` : ''}
         <span className={sectionNote}>最近pushした15リポジトリ</span>
       </p>
+      {runs.status === 'ok' && (
+        <PanelTabs<Visibility>
+          label="実行履歴の切り替え"
+          className={visibilityTabs}
+          current={current}
+          onChange={setPicked}
+          items={[
+            tabItem('private', '🔒 private'),
+            tabItem('public', 'public'),
+          ]}
+        />
+      )}
       {runs.status !== 'ok' ? (
         <StatusNote state={runs} what="実行履歴" />
       ) : list.length === 0 ? (
