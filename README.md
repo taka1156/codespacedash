@@ -3,7 +3,7 @@
 **QuotaDash** は、GitHub（Codespaces・Actions・Copilot）と Cloudflare（Workers Builds・無料枠）の利用枠をまとめて確認するダッシュボードです。
 タブで切り替えて使用量と残りを可視化し、Codespaces の消し忘れは PWA のプッシュ通知で知らせます。
 
-> 旧称 CodespaceDash。Codespaces 専用ではなくなったため改名しました。リポジトリ名・Worker 名（`codespacedash`）は互換性のためそのままです。
+> 旧称 CodespaceDash。Codespaces 専用ではなくなったため改名しました。Worker 名（`codespacedash`）は互換性のためそのままです。
 
 ## 構成
 
