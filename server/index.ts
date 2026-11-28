@@ -4,10 +4,11 @@ import {
   type ApiErrorBody,
   CSRF_HEADER,
   CSRF_VALUE,
-  type DashboardResponse,
+  type DashboardApiResponse,
   type PullsResponse,
   type PushConfigResponse,
   type RepoCandidatesResponse,
+  type WorkersBuildsResponse,
 } from '../shared/types';
 import { type AppEnv, type Env, numVar } from './env';
 import { cloudflareAccess } from './lib/access';
@@ -88,7 +89,6 @@ api.get('/dashboard', async (c) => {
     billing,
     runs,
     copilot,
-    builds,
     usage,
     githubToken,
     cloudflareToken,
@@ -98,9 +98,6 @@ api.get('/dashboard', async (c) => {
     settle(() => getBillingSummary(c.env, user.login, period()), PERM.plan),
     settle(() => listRecentRuns(c.env), PERM.actions),
     settle(() => getPremiumRequests(c.env, user.login, period()), PERM.plan),
-    hasCf
-      ? settle(() => getWorkersBuilds(c.env), PERM.builds)
-      : unconfigured<never>(CF_SETTING),
     hasCf
       ? settle(() => getCloudflareUsage(c.env), PERM.analytics)
       : unconfigured<never>(CF_SETTING),
@@ -113,15 +110,24 @@ api.get('/dashboard', async (c) => {
     getServiceStatus(),
   ]);
 
-  return c.json<DashboardResponse>({
+  return c.json<DashboardApiResponse>({
     user,
     github: { codespaces, billing, runs, copilot },
-    cloudflare: { builds, usage },
+    cloudflare: { usage },
     tokens: { github: githubToken, cloudflare: cloudflareToken },
     serviceStatus,
     notifyAfterMin: numVar(c.env.NOTIFY_AFTER_MIN, 60),
     fetchedAt: new Date().toISOString(),
   });
+});
+
+// Workers Builds は Preview の数だけ API を呼ぶので、/dashboard とは別の Worker 呼び出しにして
+// サブリクエストの上限（Free は1回50）を分ける
+api.get('/workers-builds', async (c) => {
+  const builds = workersConfigured(c.env)
+    ? await settle(() => getWorkersBuilds(c.env), PERM.builds)
+    : unconfigured<never>(CF_SETTING);
+  return c.json<WorkersBuildsResponse>({ builds });
 });
 
 // お気に入りリポジトリのオープンな PR（お気に入りは端末ごとなのでクエリで受け取る）

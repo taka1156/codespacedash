@@ -184,10 +184,6 @@ describe('GET /api/dashboard', () => {
         copilot: { status: 'error', message: 'boom' },
       },
       cloudflare: {
-        builds: {
-          status: 'unconfigured',
-          setting: 'CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID',
-        },
         usage: {
           status: 'unconfigured',
           setting: 'CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID',
@@ -224,11 +220,8 @@ describe('GET /api/dashboard', () => {
     expect(getCloudflareToken).not.toHaveBeenCalled();
   });
 
-  it('Cloudflare が設定されていれば Workers Builds と使用量も取る', async () => {
+  it('Cloudflare が設定されていれば使用量も取る（Workers Builds は別の API）', async () => {
     mockAll();
-    vi.mocked(getWorkersBuilds).mockRejectedValue(
-      new CloudflareError(403, 'denied'),
-    );
     vi.mocked(getCloudflareUsage).mockResolvedValue({
       daily: {},
       monthly: {},
@@ -253,10 +246,8 @@ describe('GET /api/dashboard', () => {
       permission: 'トークンの再発行',
       message: 'Invalid API Token',
     });
-    expect(body.cloudflare.builds).toMatchObject({
-      status: 'forbidden',
-      permission: expect.stringContaining('Workers Builds Configuration'),
-    });
+    expect(body.cloudflare).not.toHaveProperty('builds');
+    expect(getWorkersBuilds).not.toHaveBeenCalled();
     expect(body.cloudflare.usage.status).toBe('ok');
     expect(body.notifyAfterMin).toBe(60);
   });
@@ -290,6 +281,55 @@ describe('GET /api/dashboard', () => {
     const res = await call('/api/dashboard');
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({ error: 'Bad creds' });
+  });
+});
+
+describe('GET /api/workers-builds', () => {
+  const cfEnv = fakeEnv({
+    CLOUDFLARE_API_TOKEN: 't',
+    CLOUDFLARE_ACCOUNT_ID: 'a',
+  });
+
+  it('Cloudflare が未設定なら呼ばずに未設定を返す', async () => {
+    const res = await call('/api/workers-builds');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      builds: {
+        status: 'unconfigured',
+        setting: 'CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID',
+      },
+    });
+    expect(getWorkersBuilds).not.toHaveBeenCalled();
+  });
+
+  it('ビルドの集計を返す', async () => {
+    const summary = {
+      builds: [],
+      workerCount: 0,
+      usedMinutes: 0,
+      period: { start: 's', end: 'e' },
+      detectedPlan: null,
+      limitReached: false,
+    };
+    vi.mocked(getWorkersBuilds).mockResolvedValue(summary);
+    const res = await call('/api/workers-builds', {}, cfEnv);
+    expect(await res.json()).toEqual({
+      builds: { status: 'ok', data: summary },
+    });
+  });
+
+  it('権限不足は足りない権限名を添える', async () => {
+    vi.mocked(getWorkersBuilds).mockRejectedValue(
+      new CloudflareError(403, 'denied'),
+    );
+    const res = await call('/api/workers-builds', {}, cfEnv);
+    expect(await res.json()).toEqual({
+      builds: {
+        status: 'forbidden',
+        permission: expect.stringContaining('Workers Builds Configuration'),
+        message: 'denied',
+      },
+    });
   });
 });
 
