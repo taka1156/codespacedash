@@ -46,7 +46,7 @@ description: QuotaDash でテストを書く・直す・カバレッジ（C0〜C
 | 空 | `''`・空白だけ・`[]`・`{}` | リポジトリ 0 件、名前が空 |
 | 0 | 0・負の数。上限 0 での割り算 | 使用量 0、上限 0 |
 | 異常系 | 401/403/500、`fetch` の失敗、壊れた JSON、想定と違う形、KV が空 | `server/lib/section.test.ts`：403 → `forbidden`、それ以外 → `error`、Error 以外が投げられた場合 |
-| 不正な日付・NaN | `new Date('x')`（`NaN` になる）、`Number('')` | — |
+| 不正な日付・NaN | `new Date('x')`（`NaN` になる）、`Number('')` | `shared/tokens.test.ts`：読めない期限は `ok` ではなく `error`／`src/lib/format.test.ts`：画面には `NaN` ではなく「—」 |
 | 重複 | 同じ値・大文字小文字だけ違う値・同じ名前の別物。重複を除いた後の件数で上限と比べるか | `shared/repos.ts` の `uniqueRepos`：`['a/b', 'A/B']` → 1件（先の方が残る） |
 | 並び順 | ばらばらの順で渡す・キーが同じもの・キーが null のもの。並べてから件数で切るなら、切られるのが正しい側か | `CodespacesPanel.tsx`：状態順 → 同じ状態なら最終使用の新しい順、`last_used_at: null` は最後 |
 | タイムゾーン・日付の変わり目 | 日付が変わる直前と直後、月末・月初、2月（うるう年）、31日の月、`UTC` と `+09:00` の両方の表記 | `workersBuilds.ts` の `billingPeriod`：`Asia/Tokyo` で `2026-11-30T15:00Z` は 12月の期間 |
