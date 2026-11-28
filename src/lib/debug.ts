@@ -6,6 +6,7 @@ import {
   type WorkersPlan,
 } from './plans';
 import { asset, IS_STATIC_PREVIEW } from './preview';
+import { STATUS_PAGE, watchedComponents } from './serviceStatus';
 import {
   type BillingUsageItem,
   type CloudflareUsage,
@@ -17,6 +18,8 @@ import {
   type PullsResponse,
   type RepoPulls,
   type SectionState,
+  type ServiceIssue,
+  type StatusService,
   type WorkerBuild,
   type WorkersBuildsSummary,
   type WorkflowRun,
@@ -276,6 +279,7 @@ const mockBase = (): DashboardResponse => ({
     github: ok({ expiresAt: new Date(Date.now() + 40 * DAY_MS).toISOString() }),
     cloudflare: ok({ expiresAt: null }),
   },
+  serviceStatus: { github: [], cloudflare: [] },
   notifyAfterMin: 60,
   fetchedAt: new Date().toISOString(),
 });
@@ -318,6 +322,26 @@ export const applyDebug = (
     cloudflare: { ...base.cloudflare },
     tokens: { ...base.tokens },
   };
+
+  const outage = d.serviceStatus;
+  if (outage) {
+    const fakeIssues = (service: StatusService): ServiceIssue[] =>
+      watchedComponents(service).map((component, i) => ({
+        component,
+        status: outage,
+        incidents: [
+          {
+            id: `debug-${service}-${i}`,
+            name: `Incident with ${component}`,
+            url: STATUS_PAGE[service].url,
+          },
+        ],
+      }));
+    out.serviceStatus = {
+      github: fakeIssues('github'),
+      cloudflare: fakeIssues('cloudflare'),
+    };
+  }
 
   const csHours = num(d.codespacesHours);
   const csStorage = num(d.codespacesStorageGb);

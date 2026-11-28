@@ -21,6 +21,8 @@ import {
 import { checkForgottenCodespaces } from './lib/notify';
 import { listPullRequests, listRepoCandidates } from './lib/pulls';
 import { sendToAll } from './lib/push';
+import { getServiceStatus } from './lib/serviceStatus';
+import { checkServiceStatus } from './lib/statusNotify';
 import { checkTokenExpiry } from './lib/tokenNotify';
 import { fakeEnv, PUSH_VARS } from './testing/fakeEnv';
 
@@ -48,6 +50,8 @@ vi.mock('./lib/pulls', async (importOriginal) => ({
 }));
 vi.mock('./lib/notify', () => ({ checkForgottenCodespaces: vi.fn() }));
 vi.mock('./lib/tokenNotify', () => ({ checkTokenExpiry: vi.fn() }));
+vi.mock('./lib/statusNotify', () => ({ checkServiceStatus: vi.fn() }));
+vi.mock('./lib/serviceStatus', () => ({ getServiceStatus: vi.fn() }));
 vi.mock('./lib/push', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./lib/push')>()),
   sendToAll: vi.fn(),
@@ -148,6 +152,12 @@ describe('GET /api/dashboard', () => {
     vi.mocked(getGithubToken).mockResolvedValue({
       expiresAt: '2026-12-03T00:00:00.000Z',
     });
+    vi.mocked(getServiceStatus).mockResolvedValue({
+      github: [
+        { component: 'Actions', status: 'degraded_performance', incidents: [] },
+      ],
+      cloudflare: [],
+    });
   };
 
   it('項目ごとに取得状態を返す（1つ失敗しても他は返す）', async () => {
@@ -192,6 +202,16 @@ describe('GET /api/dashboard', () => {
           status: 'unconfigured',
           setting: 'CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID',
         },
+      },
+      serviceStatus: {
+        github: [
+          {
+            component: 'Actions',
+            status: 'degraded_performance',
+            incidents: [],
+          },
+        ],
+        cloudflare: [],
       },
       notifyAfterMin: 45,
       fetchedAt: NOW.toISOString(),
@@ -432,15 +452,18 @@ describe('scheduled', () => {
   it('消し忘れとトークンの期限の確認を waitUntil で走らせる', async () => {
     vi.mocked(checkForgottenCodespaces).mockResolvedValue();
     vi.mocked(checkTokenExpiry).mockResolvedValue();
+    vi.mocked(checkServiceStatus).mockResolvedValue();
     const env = await run();
     expect(checkForgottenCodespaces).toHaveBeenCalledWith(env);
     expect(checkTokenExpiry).toHaveBeenCalledWith(env);
+    expect(checkServiceStatus).toHaveBeenCalledWith(env);
     expect(console.error).not.toHaveBeenCalled();
   });
 
   it('片方が失敗しても、もう片方は動かしてエラーを記録する', async () => {
     vi.mocked(checkForgottenCodespaces).mockRejectedValue(new Error('boom'));
     vi.mocked(checkTokenExpiry).mockResolvedValue();
+    vi.mocked(checkServiceStatus).mockResolvedValue();
     await run();
     expect(checkTokenExpiry).toHaveBeenCalled();
     expect(console.error).toHaveBeenCalledWith(

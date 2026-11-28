@@ -145,6 +145,8 @@ export const dashboard = (
       github: ok({ expiresAt: '2027-01-26T05:00:00.000Z' }),
       cloudflare: { status: 'unconfigured', setting: 'CLOUDFLARE_API_TOKEN' },
     },
+    // どちらも正常（障害の表示は出ない）
+    serviceStatus: { github: [], cloudflare: [] },
     notifyAfterMin: 60,
     fetchedAt: NOW.toISOString(),
     ...rest,

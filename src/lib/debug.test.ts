@@ -48,6 +48,7 @@ const data = (usageItems: BillingUsageItem[]): DashboardResponse => ({
     github: { status: 'ok', data: { expiresAt: null } },
     cloudflare: { status: 'unconfigured', setting: 'CLOUDFLARE_API_TOKEN' },
   },
+  serviceStatus: { github: [], cloudflare: [] },
   notifyAfterMin: 60,
   fetchedAt: '2026-11-26T00:00:00Z',
 });
@@ -405,5 +406,37 @@ describe('applyPullsDebug', () => {
       ...real,
       pulls: { status: 'unconfigured', setting: 'GITHUB_TOKEN' },
     });
+  });
+});
+
+describe('applyDebug（サービスの障害）', () => {
+  it('見ているコンポーネントをすべてその状態にし、疑似の障害を添える', () => {
+    const out = applyDebug(
+      data(real),
+      settings({ serviceStatus: 'partial_outage' }),
+    );
+    expect(out?.serviceStatus.github.map((i) => i.component)).toEqual([
+      'API Requests',
+      'Codespaces',
+      'Actions',
+      'Copilot',
+      'Pull Requests',
+    ]);
+    expect(out?.serviceStatus.cloudflare[1]).toEqual({
+      component: 'Workers Builds',
+      status: 'partial_outage',
+      incidents: [
+        {
+          id: 'debug-cloudflare-1',
+          name: 'Incident with Workers Builds',
+          url: 'https://www.cloudflarestatus.com',
+        },
+      ],
+    });
+  });
+
+  it('空欄なら実データのまま', () => {
+    const d = data(real);
+    expect(applyDebug(d, settings({}))?.serviceStatus).toEqual(d.serviceStatus);
   });
 });

@@ -43,6 +43,8 @@ import {
   sendToAll,
 } from './lib/push';
 import { settle, unconfigured } from './lib/section';
+import { getServiceStatus } from './lib/serviceStatus';
+import { checkServiceStatus } from './lib/statusNotify';
 import { checkTokenExpiry } from './lib/tokenNotify';
 
 const api = new Hono<AppEnv>().basePath('/api');
@@ -89,6 +91,7 @@ api.get('/dashboard', async (c) => {
     usage,
     githubToken,
     cloudflareToken,
+    serviceStatus,
   ] = await Promise.all([
     settle(() => listCodespaces(c.env), PERM.codespaces),
     settle(() => getBillingSummary(c.env, user.login, period), PERM.plan),
@@ -105,6 +108,8 @@ api.get('/dashboard', async (c) => {
     hasCf
       ? settle(() => getCloudflareToken(c.env), PERM.token)
       : unconfigured<never>(CF_SETTING),
+    // 公式ステータスページ。取れなくても空になるだけで、ダッシュボードは止めない
+    getServiceStatus(),
   ]);
 
   return c.json<DashboardResponse>({
@@ -112,6 +117,7 @@ api.get('/dashboard', async (c) => {
     github: { codespaces, billing, runs, copilot },
     cloudflare: { builds, usage },
     tokens: { github: githubToken, cloudflare: cloudflareToken },
+    serviceStatus,
     notifyAfterMin: numVar(c.env.NOTIFY_AFTER_MIN, 60),
     fetchedAt: new Date().toISOString(),
   });
@@ -200,6 +206,7 @@ export default {
       Promise.allSettled([
         checkForgottenCodespaces(env),
         checkTokenExpiry(env),
+        checkServiceStatus(env),
       ]).then((results) => {
         for (const r of results) {
           if (r.status === 'rejected') {

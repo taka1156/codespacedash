@@ -6,7 +6,7 @@ import { PanelTabs } from './PanelTabs';
 const items = [
   { key: 'a', label: 'A' },
   { key: 'b', label: 'B', alert: true },
-  { key: 'c', label: 'C' },
+  { key: 'c', label: 'C', outage: true },
 ] as const;
 
 const Tabs = ({ onChange }: { onChange?: (k: string) => void }) => {
@@ -38,6 +38,14 @@ describe('PanelTabs', () => {
     expect(tabs.map((t) => t.tabIndex)).toEqual([0, -1, -1]);
   });
 
+  it('outage のタブには障害の印を出す', () => {
+    render(<Tabs />);
+    expect(screen.getAllByTitle('サービスで障害が発生中')).toHaveLength(1);
+    expect(screen.getByRole('tab', { name: 'C⚠' })).toContainElement(
+      screen.getByTitle('サービスで障害が発生中'),
+    );
+  });
+
   it('alert のタブには要確認の点を出す', () => {
     render(<Tabs />);
     expect(screen.getAllByTitle('要確認')).toHaveLength(1);
@@ -49,9 +57,9 @@ describe('PanelTabs', () => {
   it('クリックで切り替える', () => {
     const onChange = vi.fn();
     render(<Tabs onChange={onChange} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'C' }));
+    fireEvent.click(screen.getByRole('tab', { name: /^C/ }));
     expect(onChange).toHaveBeenCalledWith('c');
-    expect(screen.getByRole('tab', { name: 'C' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: /^C/ })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -60,7 +68,8 @@ describe('PanelTabs', () => {
   it('左右キーで隣のタブに移り、端では反対側に回る', () => {
     const onChange = vi.fn();
     render(<Tabs onChange={onChange} />);
-    const tab = (n: string) => screen.getByRole('tab', { name: n });
+    const tab = (n: string) =>
+      screen.getByRole('tab', { name: new RegExp(`^${n}`) });
 
     fireEvent.keyDown(tab('A'), { key: 'ArrowLeft' });
     expect(onChange).toHaveBeenLastCalledWith('c');

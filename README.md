@@ -146,6 +146,25 @@ Yarn は `package.json` の `packageManager`（`yarn@1.22.22`）、Node.js は `
   - 見つからない・トークンで見られないリポジトリは「見つかりません」と出します
 - 取れなかった項目も枠はそのまま出し、中身だけ「未設定」「権限不足（足りない権限名）」「取得エラー」に差し替えます
 - API トークンの期限が 14 日以内・期限切れ・無効のときは、上部に警告を出し、歯車に黄色い点を付けます（「確認」で設定ページのトークンへ）
+- GitHub・Cloudflare の公式ステータスページで障害が出ているときは、関係するパネルに帯を出します（下の「サービスの障害」）
+
+### サービスの障害
+
+[GitHub Status](https://www.githubstatus.com) と [Cloudflare Status](https://www.cloudflarestatus.com) の `summary.json`（認証不要）を Worker が5分キャッシュして、見ているコンポーネントのうち正常でないものだけを出します。普段は何も出さず、画面の下にステータスページへのリンクだけを置いています。
+
+| 出す場所 | GitHub | Cloudflare |
+|---|---|---|
+| タブの上（全パネル共通） | API Requests | API |
+| Codespaces / Workers Builds | Codespaces | Workers Builds |
+| Actions / 日次の無料枠 | Actions | Workers・Workers KV・Analytics |
+| Copilot / ストレージ・月次 | Copilot | Workers KV・Analytics |
+| PR タブ | Pull Requests | — |
+
+- 帯は「性能低下：Actions — （ステータスページの障害のタイトル）」の形。状態名だけ日本語で、タイトルは英語のまま。性能低下・メンテナンス中は黄、一部障害・全面障害は赤
+- 障害が出ているタブには ⚠ を付けます。取得エラーの枠には「GitHub 側で障害が発生中です」と添えます（トークンではなく障害が原因かどうかの切り分け用）
+- ステータスページが取れなくても何も出さないだけで、ダッシュボードは止めません
+- プッシュ通知を有効にしていれば、Cron でも確かめて新しい障害をサービスごとにまとめて通知します（同じ障害は1日1回。状態が悪くなったり別の障害が付いたりしたら改めて通知。Cloudflare は設定しているときだけ）
+- デバッグの「サービスの障害」で、見ているコンポーネントをすべて指定の状態にして表示を確かめられます
 - Cloudflare タブの「日次の無料枠」「ストレージ・月次」は GraphQL Analytics API から項目ごとに取得します（1分キャッシュ）
   - 日次（00:00 UTC = 9:00 JST リセット）: Workers リクエスト、Workers AI（Neurons）、D1 の読み書き行数、KV の読み書き・削除・一覧取得の回数
   - 月次・現在量: R2 の Class A / B 操作（UTC の今月、削除などの無料操作は除く）、R2・D1・KV のストレージ量
