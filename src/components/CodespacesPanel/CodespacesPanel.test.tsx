@@ -60,7 +60,7 @@ describe('CodespacesPanel', () => {
       expect(container).toHaveTextContent('使用 30 / 90 時間');
     });
 
-    it('使用量が取れなければ理由を出す', () => {
+    it('使用量が取れなければ理由と、2コア換算の枠を出す', () => {
       const { container } = panel(ok([]), {
         billing: {
           status: 'forbidden',
@@ -69,11 +69,19 @@ describe('CodespacesPanel', () => {
         },
       });
       expect(container).toHaveTextContent(
-        '権限不足（Plan: Read） ・ 枠 120 時間',
+        '権限不足（Plan: Read） ・ 枠 60 時間',
       );
       expect(container).toHaveTextContent(
         '権限不足（Plan: Read） ・ 枠 15 GB-月',
       );
+    });
+
+    it('使用量が取れなくても Pro は 2コア換算で 90 時間', () => {
+      const { container } = panel(ok([]), {
+        plan: 'pro',
+        billing: { status: 'error', message: 'x' },
+      });
+      expect(container).toHaveTextContent('取得失敗 ・ 枠 90 時間');
     });
   });
 
@@ -221,6 +229,22 @@ describe('CodespacesPanel', () => {
       expect(a).toHaveTextContent('自動削除 12日後');
       expect(b).toHaveTextContent('自動削除 1日以内');
       expect(c).not.toHaveTextContent('自動削除');
+    });
+
+    it('日時が読めなければ NaN と出さない（最終使用は —、自動削除は出さない）', () => {
+      panel(
+        ok([
+          codespace({
+            state: 'Shutdown',
+            last_used_at: 'x',
+            retention_expires_at: 'x',
+          }),
+        ]),
+      );
+      const [a] = items();
+      expect(a).toHaveTextContent('最終使用: —');
+      expect(a).not.toHaveTextContent('自動削除');
+      expect(a).not.toHaveTextContent('NaN');
     });
 
     it('稼働中は出さない', () => {

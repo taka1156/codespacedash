@@ -168,12 +168,17 @@ describe('WorkersPanel', () => {
 
   it.each([
     [{ startedAt: ago(0.75), stoppedAt: ago(0) }, '45秒'],
+    // 単位が変わる境目
+    [{ startedAt: ago(59 / 60), stoppedAt: ago(0) }, '59秒'],
+    [{ startedAt: ago(1), stoppedAt: ago(0) }, '1分0秒'],
     // 開始時刻がなければ作成時刻から
     [{ startedAt: null, createdAt: ago(3), stoppedAt: ago(0) }, '3分0秒'],
     // ビルド中は今まで
     [{ status: 'running', startedAt: ago(1.5), stoppedAt: null }, '1分30秒'],
     // 時刻が逆転していても 0秒
     [{ startedAt: ago(0), stoppedAt: ago(1) }, '0秒'],
+    // 時刻が読めなければ NaN と出さない
+    [{ startedAt: 'x', stoppedAt: ago(0) }, '—'],
   ] as const)('所要時間 %o は %s', (p, text) => {
     panel(ok({ builds: [build(p)] }));
     expect(lastMeta(items()[0])).toBe(text);

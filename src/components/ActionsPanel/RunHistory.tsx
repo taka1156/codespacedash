@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import { useState } from 'react';
-import { fmtAgo } from '@/lib/format';
+import { fmtAgo, UNKNOWN } from '@/lib/format';
 import type { SectionState, WorkflowRun } from '@/lib/types';
 import { PanelTabs } from '../shared/PanelTabs/PanelTabs';
 import { StatusNote } from '../shared/StatusNote/StatusNote';
@@ -68,6 +68,9 @@ const fmtDuration = (r: WorkflowRun) => {
   const end =
     r.status === 'completed' ? new Date(r.updatedAt).getTime() : Date.now();
   const sec = Math.max(0, Math.round((end - start) / 1000));
+  if (Number.isNaN(sec)) {
+    return UNKNOWN;
+  }
   if (sec < 60) {
     return `${sec}秒`;
   }

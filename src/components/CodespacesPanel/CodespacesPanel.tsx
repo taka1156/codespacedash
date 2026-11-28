@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { useState } from 'react';
-import { codespacesQuota } from '@/lib/codespacesQuota';
+import { codespacesFreeHours, codespacesQuota } from '@/lib/codespacesQuota';
+import { UNKNOWN } from '@/lib/format';
 import { GITHUB_PLANS, type GithubPlan } from '@/lib/plans';
 import { statusText } from '@/lib/sectionStatus';
 import type { BillingUsageSummary, Codespace, SectionState } from '@/lib/types';
@@ -106,9 +107,12 @@ const minutesSince = (s: string | null) =>
 
 const fmtAgo = (s: string | null) => {
   if (!s) {
-    return '—';
+    return UNKNOWN;
   }
   const min = minutesSince(s);
+  if (Number.isNaN(min)) {
+    return UNKNOWN;
+  }
   if (min < 60) {
     return `${Math.floor(min)}分前`;
   }
@@ -123,6 +127,9 @@ const fmtUntil = (s: string | null) => {
     return null;
   }
   const days = (new Date(s).getTime() - Date.now()) / 86_400_000;
+  if (Number.isNaN(days)) {
+    return null;
+  }
   return days < 1 ? '1日以内' : `${Math.floor(days)}日後`;
 };
 
@@ -150,7 +157,7 @@ const Quota = ({
       <div className={quotaBox}>
         <QuotaBar
           label={hours}
-          free={GITHUB_PLANS[plan].codespacesCoreHours}
+          free={codespacesFreeHours(plan)}
           unit="時間"
           unavailable={why}
         />

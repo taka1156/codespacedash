@@ -114,6 +114,11 @@ describe('RunHistory', () => {
 
     it.each([
       [{ startedAt: at(45), updatedAt: at(0) }, '45秒'],
+      // 単位が変わる境目
+      [{ startedAt: at(59), updatedAt: at(0) }, '59秒'],
+      [{ startedAt: at(60), updatedAt: at(0) }, '1分0秒'],
+      [{ startedAt: at(3599), updatedAt: at(0) }, '59分59秒'],
+      [{ startedAt: at(3600), updatedAt: at(0) }, '1時間0分'],
       [{ startedAt: at(125), updatedAt: at(0) }, '2分5秒'],
       [{ startedAt: at(3 * 3600 + 7 * 60), updatedAt: at(0) }, '3時間7分'],
       // 開始時刻がなければ作成時刻から
@@ -125,6 +130,8 @@ describe('RunHistory', () => {
         { status: 'in_progress', startedAt: at(90), updatedAt: at(80) },
         '1分30秒',
       ],
+      // 時刻が読めなければ NaN と出さない
+      [{ startedAt: 'x', updatedAt: at(0) }, '—'],
     ] as const)('%o は %s', (p, text) => {
       render(<RunHistory runs={ok([run(p)])} />);
       expect(items()[0]).toHaveTextContent(`#7${text}`);

@@ -4,6 +4,7 @@ import {
   billingPeriod,
   buildMinutes,
   detectPlan,
+  inPeriod,
   usedMinutes,
 } from './workersBuilds';
 
@@ -46,6 +47,21 @@ describe('billingPeriod', () => {
       end: '2026-12-05T03:00:00.000Z',
     });
   });
+  it.each([
+    ['2026-03-31T00:00:00Z', '2026-02-28T00:00:00.000Z'],
+    ['2028-03-31T00:00:00Z', '2028-02-29T00:00:00.000Z'],
+    ['2026-05-31T06:00:00Z', '2026-04-30T06:00:00.000Z'],
+    ['2026-03-28T00:00:00Z', '2026-02-28T00:00:00.000Z'],
+    ['2026-01-31T00:00:00Z', '2025-12-31T00:00:00.000Z'],
+  ])(
+    '前月にその日がなければ前月の末日から（%s → %s、繰り越さない）',
+    (refreshOn, start) => {
+      expect(billingPeriod(refreshOn, 'Asia/Tokyo')).toEqual({
+        start,
+        end: new Date(refreshOn).toISOString(),
+      });
+    },
+  );
   it('なければタイムゾーン基準の今月（JST の 11/1 0:00 = UTC 10/31 15:00）', () => {
     expect(
       billingPeriod(null, 'Asia/Tokyo', new Date('2026-11-26T12:00:00Z')),
@@ -126,5 +142,52 @@ describe('buildMinutes（時刻の逆転）', () => {
         }),
       ),
     ).toBe(0);
+  });
+});
+
+describe('境界値', () => {
+  const period = {
+    start: '2026-11-01T00:00:00Z',
+    end: '2026-12-01T00:00:00Z',
+  };
+
+  it.each([
+    ['2026-10-31T23:59:59.999Z', false],
+    ['2026-11-01T00:00:00.000Z', true],
+    ['2026-11-30T23:59:59.999Z', true],
+    ['2026-12-01T00:00:00.000Z', false],
+  ])('期間は始まりを含み、終わりを含まない（%s → %s）', (createdAt, inside) => {
+    expect(inPeriod(build({ createdAt }), period)).toBe(inside);
+  });
+
+  it.each([
+    ['2026-11-10T00:00:00.000Z', 0],
+    ['2026-11-10T00:00:00.001Z', 1],
+    ['2026-11-10T00:01:00.000Z', 1],
+    ['2026-11-10T00:01:00.001Z', 2],
+  ])('ビルド時間は1分単位で切り上げる（終了 %s → %s 分）', (stoppedAt, min) => {
+    expect(
+      buildMinutes(build({ startedAt: '2026-11-10T00:00:00Z', stoppedAt })),
+    ).toBe(min);
+  });
+
+  it.each([
+    // UTC 12/31 14:59:59 = JST 12/31 23:59:59 → 12月
+    [
+      '2026-12-31T14:59:59Z',
+      '2026-11-30T15:00:00.000Z',
+      '2026-12-31T15:00:00.000Z',
+    ],
+    // UTC 12/31 15:00 = JST 1/1 0:00 → 翌年1月
+    [
+      '2026-12-31T15:00:00Z',
+      '2026-12-31T15:00:00.000Z',
+      '2027-01-31T15:00:00.000Z',
+    ],
+  ])('年をまたぐときも JST の今月（%s）', (now, start, end) => {
+    expect(billingPeriod(null, 'Asia/Tokyo', new Date(now))).toEqual({
+      start,
+      end,
+    });
   });
 });

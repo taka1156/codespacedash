@@ -53,6 +53,21 @@ const tzOffsetMs = (date: Date, timeZone: string) => {
 };
 
 /**
+ * 1か月前の同じ日時（UTC）。前月にその日がなければ前月の末日にそろえる。
+ * setUTCMonth(-1) だけだと 3/31 → 2/31 → 3/3 のように繰り越してしまう
+ */
+const oneMonthBefore = (d: Date) => {
+  const start = new Date(d);
+  start.setUTCDate(1);
+  start.setUTCMonth(start.getUTCMonth() - 1);
+  const lastDay = new Date(
+    Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  start.setUTCDate(Math.min(d.getUTCDate(), lastDay));
+  return start;
+};
+
+/**
  * 集計期間。Free はビルド時間のリセット日（build_minutes_refresh_on）の1か月前から、
  * リセット日がわからなければタイムゾーン基準の今月。
  */
@@ -64,9 +79,10 @@ export const billingPeriod = (
   if (refreshOn) {
     const end = new Date(refreshOn);
     if (!Number.isNaN(end.getTime())) {
-      const start = new Date(end);
-      start.setUTCMonth(start.getUTCMonth() - 1);
-      return { start: start.toISOString(), end: end.toISOString() };
+      return {
+        start: oneMonthBefore(end).toISOString(),
+        end: end.toISOString(),
+      };
     }
   }
   const offset = tzOffsetMs(now, timeZone);

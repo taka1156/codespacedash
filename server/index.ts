@@ -78,7 +78,8 @@ const CF_SETTING = 'CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID';
 
 api.get('/dashboard', async (c) => {
   const user = await getUser(c.env);
-  const period = currentPeriod(c.env.TIMEZONE);
+  // TIMEZONE が不正なら、今月を使う項目（課金・Copilot）だけをエラーにする
+  const period = () => currentPeriod(c.env.TIMEZONE);
 
   // 項目ごとに状態を返す（1つ失敗しても他のパネルは表示できる）
   const hasCf = workersConfigured(c.env);
@@ -94,9 +95,9 @@ api.get('/dashboard', async (c) => {
     serviceStatus,
   ] = await Promise.all([
     settle(() => listCodespaces(c.env), PERM.codespaces),
-    settle(() => getBillingSummary(c.env, user.login, period), PERM.plan),
+    settle(() => getBillingSummary(c.env, user.login, period()), PERM.plan),
     settle(() => listRecentRuns(c.env), PERM.actions),
-    settle(() => getPremiumRequests(c.env, user.login, period), PERM.plan),
+    settle(() => getPremiumRequests(c.env, user.login, period()), PERM.plan),
     hasCf
       ? settle(() => getWorkersBuilds(c.env), PERM.builds)
       : unconfigured<never>(CF_SETTING),

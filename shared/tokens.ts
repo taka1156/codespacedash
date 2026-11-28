@@ -53,6 +53,15 @@ export const tokenStatus = (
     return { level: 'never', expiresAt, daysLeft: null, message: null };
   }
   const ms = new Date(expiresAt).getTime() - now;
+  // 読めない期限を「有効」と取り違えない（GitHub のヘッダーと同じ扱い）
+  if (Number.isNaN(ms)) {
+    return {
+      level: 'error',
+      expiresAt: null,
+      daysLeft: null,
+      message: `トークンの期限を読み取れません: ${expiresAt}`,
+    };
+  }
   const daysLeft = Math.ceil(ms / DAY_MS);
   return {
     level: ms <= 0 ? 'expired' : daysLeft <= TOKEN_WARN_DAYS ? 'warn' : 'ok',

@@ -64,6 +64,27 @@ describe('codespacesQuota', () => {
       expect(q?.usedStorageGbMonth).toBeCloseTo(1);
     });
 
+    it.each([
+      // うるう年の2月は 29日 = 696時間
+      [{ year: 2028, month: 2 }, 696],
+      // 31日の月は 744時間
+      [{ year: 2026, month: 12 }, 744],
+    ])('%o は %s 時間で割る', (timePeriod, hours) => {
+      const q = codespacesQuota(
+        summary(
+          [
+            item({
+              sku: 'codespaces_storage',
+              unitType: 'GigabyteHours',
+              grossQuantity: hours,
+            }),
+          ],
+          timePeriod,
+        ),
+      );
+      expect(q?.usedStorageGbMonth).toBeCloseTo(1);
+    });
+
     it('月が分からないときは 1年の平均（730時間）で割る', () => {
       const q = codespacesQuota(
         summary(
