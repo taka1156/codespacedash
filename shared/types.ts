@@ -293,6 +293,20 @@ export interface DashboardResponse {
   fetchedAt: string;
 }
 
+/**
+ * GET /api/dashboard の応答。Workers Builds は Preview ごとに API を呼ぶので、
+ * 1回の Worker 呼び出しのサブリクエスト上限に収まるよう GET /api/workers-builds に分けている。
+ * クライアントで2つをまとめて DashboardResponse にする
+ */
+export type DashboardApiResponse = Omit<DashboardResponse, 'cloudflare'> & {
+  cloudflare: Omit<DashboardResponse['cloudflare'], 'builds'>;
+};
+
+// GET /api/workers-builds
+export interface WorkersBuildsResponse {
+  builds: SectionState<WorkersBuildsSummary>;
+}
+
 export interface ApiErrorBody {
   error: string;
 }
