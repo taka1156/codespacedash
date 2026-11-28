@@ -236,6 +236,12 @@ export type SectionState<T> =
 export const okData = <T>(s: SectionState<T> | undefined): T | null =>
   s?.status === 'ok' ? s.data : null;
 
+// API トークンの期限（設定ページとダッシュボードの警告に使う）
+export interface TokenInfo {
+  /** ISO 8601。無期限のトークンなら null */
+  expiresAt: string | null;
+}
+
 // GET /api/dashboard
 export interface DashboardResponse {
   user: GithubUser;
@@ -249,6 +255,10 @@ export interface DashboardResponse {
   cloudflare: {
     builds: SectionState<WorkersBuildsSummary>;
     usage: SectionState<CloudflareUsage>;
+  };
+  tokens: {
+    github: SectionState<TokenInfo>;
+    cloudflare: SectionState<TokenInfo>;
   };
   notifyAfterMin: number;
   fetchedAt: string;

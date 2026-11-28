@@ -82,3 +82,30 @@ export const previewBanner = style({
   color: 'var(--text-muted)',
   marginBottom: 20,
 });
+
+/** トークンの期限が近い・切れたときの警告 */
+export const tokenBanner = style({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+  background: 'rgba(251, 191, 36, 0.08)',
+  border: '1px solid rgba(251, 191, 36, 0.3)',
+  borderRadius: 'var(--radius-sm)',
+  padding: '10px 16px',
+  fontSize: '0.82rem',
+  color: 'var(--yellow)',
+  marginBottom: 12,
+});
+
+export const tokenBannerDanger = style({
+  background: 'rgba(248, 113, 113, 0.08)',
+  borderColor: 'rgba(248, 113, 113, 0.25)',
+  color: 'var(--red)',
+});
+
+export const tokenBannerLink = style({
+  flexShrink: 0,
+  color: 'inherit',
+  textDecoration: 'underline',
+});

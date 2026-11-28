@@ -1,5 +1,4 @@
-import clsx from 'clsx';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId } from 'react';
 import {
   DEBUG_SECTION_STATES,
   type DebugSectionState,
@@ -18,34 +17,16 @@ import {
   WORKERS_PLANS,
 } from '@/lib/plans';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
-import { Icon } from '../shared/Icon/Icon';
-import { FavoritesTab } from './FavoritesTab';
 import {
   actions,
   control,
   group,
   legend,
-  popover,
   row,
   rowHint,
-  scroll,
   smallBtn,
   switchRow,
-  tab,
-  tabDebugOn,
-  tabs,
-  trigger,
-  wrap,
 } from './style.css';
-
-interface Props {
-  settings: Settings;
-  plans: ResolvedPlans;
-  onChange: (patch: Partial<Settings>) => void;
-  onChangeDebug: (patch: Partial<DebugSettings>) => void;
-}
-
-type Tab = 'general' | 'favorites' | 'debug';
 
 const STATE_LABEL: Record<DebugSectionState, string> = {
   '': '実データどおり',
@@ -125,11 +106,16 @@ const SelectRow = <T extends string>({
   );
 };
 
-const GeneralTab = ({
+/** 設定ページの「プラン」：無料枠・上限の計算に使う契約プラン */
+export const PlansSection = ({
   settings,
   plans,
   onChange,
-}: Omit<Props, 'onChangeDebug'>) => (
+}: {
+  settings: Settings;
+  plans: ResolvedPlans;
+  onChange: (patch: Partial<Settings>) => void;
+}) => (
   <>
     <div className={group}>
       <p className={legend}>契約プラン（無料枠・上限の計算に使う）</p>
@@ -181,12 +167,13 @@ const GeneralTab = ({
   </>
 );
 
-const DebugTab = ({
+/** 設定ページの「デバッグ」：疑似値や取得状態で見た目を確かめる */
+export const DebugSection = ({
   debug,
   onChangeDebug,
 }: {
   debug: DebugSettings;
-  onChangeDebug: Props['onChangeDebug'];
+  onChangeDebug: (patch: Partial<DebugSettings>) => void;
 }) => {
   const on = debug.enabled;
   const fallback = { value: '' as const, label: '設定どおり' };
@@ -299,6 +286,13 @@ const DebugTab = ({
           value={debug.copilotUsd}
           onChange={(v) => onChangeDebug({ copilotUsd: v })}
         />
+        <NumberRow
+          label="GitHub トークン"
+          hint="期限までの日数（0 で期限切れ）"
+          step="1"
+          value={debug.githubTokenDays}
+          onChange={(v) => onChangeDebug({ githubTokenDays: v })}
+        />
         <div className={actions}>
           <button
             type="button"
@@ -317,98 +311,5 @@ const DebugTab = ({
         </div>
       </fieldset>
     </>
-  );
-};
-
-export const SettingsMenu = (props: Props) => {
-  const { settings, onChangeDebug } = props;
-  const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState<Tab>('general');
-  const ref = useRef<HTMLDivElement>(null);
-  const panelId = useId();
-  const tabId = useId();
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const onDown = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('pointerdown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('pointerdown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
-  const TABS: { key: Tab; label: string }[] = [
-    { key: 'general', label: '設定' },
-    { key: 'favorites', label: 'お気に入り' },
-    { key: 'debug', label: settings.debug.enabled ? 'デバッグ ●' : 'デバッグ' },
-  ];
-
-  return (
-    <div className={wrap} ref={ref}>
-      <button
-        type="button"
-        className={trigger}
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-controls={panelId}
-        title="設定"
-        aria-label="設定"
-      >
-        <Icon name="settings" />
-      </button>
-      {open && (
-        <div id={panelId} className={popover} role="dialog" aria-label="設定">
-          <div className={tabs} role="tablist">
-            {TABS.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                role="tab"
-                id={`${tabId}-${t.key}`}
-                aria-selected={current === t.key}
-                aria-controls={`${tabId}-${t.key}-panel`}
-                className={clsx(
-                  tab,
-                  t.key === 'debug' && settings.debug.enabled && tabDebugOn,
-                )}
-                onClick={() => setCurrent(t.key)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-          <div
-            className={scroll}
-            role="tabpanel"
-            id={`${tabId}-${current}-panel`}
-            aria-labelledby={`${tabId}-${current}`}
-          >
-            {current === 'general' ? (
-              <GeneralTab {...props} />
-            ) : current === 'favorites' ? (
-              <FavoritesTab
-                favorites={settings.favorites}
-                onChange={(favorites) => props.onChange({ favorites })}
-              />
-            ) : (
-              <DebugTab debug={settings.debug} onChangeDebug={onChangeDebug} />
-            )}
-          </div>
-        </div>
-      )}
-    </div>
   );
 };

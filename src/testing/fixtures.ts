@@ -140,6 +140,11 @@ export const dashboard = (
       usage: { status: 'unconfigured', setting: 'CLOUDFLARE_API_TOKEN' },
       ...cloudflare,
     },
+    // 期限まで余裕がある（警告は出ない）
+    tokens: {
+      github: ok({ expiresAt: '2027-01-26T05:00:00.000Z' }),
+      cloudflare: { status: 'unconfigured', setting: 'CLOUDFLARE_API_TOKEN' },
+    },
     notifyAfterMin: 60,
     fetchedAt: NOW.toISOString(),
     ...rest,

@@ -1,10 +1,17 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useDashboard } from '@/hooks/useDashboard';
 import { usePulls } from '@/hooks/usePulls';
 import { usePush } from '@/hooks/usePush';
 import type { DashboardResponse } from '@/lib/types';
 import {
+  ago,
   build,
   buildsSummary,
   dashboard,
@@ -14,6 +21,7 @@ import {
 } from '@/testing/fixtures';
 import { setPreview } from '@/testing/previewMock';
 import { DashboardPage } from './DashboardPage';
+import { tokenBannerDanger } from './style.css';
 
 vi.mock('recharts', () => import('@/testing/rechartsMock'));
 vi.mock('@/lib/preview', () =>
@@ -60,6 +68,9 @@ const headings = () =>
   screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
 
 beforeEach(() => {
+  location.hash = '';
+  // jsdom は scrollTo を実装していない（画面の切り替えで呼ぶ）
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
   vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
   fetchAll.mockReset();
   fetchPulls.mockReset();
@@ -214,7 +225,7 @@ describe('DashboardPage', () => {
 
   it('セッション切れなら再読み込みのボタンを出す', () => {
     const reload = vi.fn();
-    vi.stubGlobal('location', { reload });
+    vi.stubGlobal('location', { reload, hash: '' });
     mockDashboard({ error: 'セッションが切れました', sessionExpired: true });
     render(<DashboardPage />);
     fireEvent.click(screen.getByRole('button', { name: '再読み込み' }));
@@ -231,19 +242,93 @@ describe('DashboardPage', () => {
     expect(stopCodespace).toHaveBeenCalledWith('cs-1');
   });
 
-  it('設定を変えるとプランに反映する', () => {
+  it('設定ページで変えた設定をダッシュボードに反映する', async () => {
     render(<DashboardPage />);
-    fireEvent.click(screen.getByRole('button', { name: '設定' }));
+    fireEvent.click(screen.getByRole('link', { name: '設定' }));
+    await screen.findByRole('tablist', { name: '設定の項目' });
+    // データを取り直さずに設定ページを出す
+    expect(fetchAll).not.toHaveBeenCalled();
     fireEvent.change(screen.getByLabelText(/^GitHub/), {
       target: { value: 'pro' },
     });
-    expect(
-      screen.getByText(/GitHub Pro の無料枠（2コア換算）/),
-    ).toBeInTheDocument();
-
     fireEvent.click(screen.getByRole('tab', { name: 'デバッグ' }));
-    fireEvent.click(screen.getByRole('checkbox'));
+    await waitFor(() => expect(location.hash).toBe('#/settings/debug'));
+    fireEvent.click(await screen.findByRole('checkbox'));
+
+    fireEvent.click(screen.getByRole('link', { name: /ダッシュボード/ }));
+    await screen.findByText(/GitHub Pro の無料枠（2コア換算）/);
     expect(screen.getByText('DEBUG')).toBeInTheDocument();
+  });
+
+  it('設定ページにトークンの期限を渡す', async () => {
+    location.hash = '#/settings/tokens';
+    mockDashboard({
+      data: dashboard({
+        tokens: {
+          github: { status: 'ok', data: { expiresAt: ago(-60 * 24 * 3) } },
+          cloudflare: { status: 'ok', data: { expiresAt: null } },
+        },
+      }),
+    });
+    render(<DashboardPage />);
+    expect(screen.getByText('あと 3 日')).toBeInTheDocument();
+    expect(screen.getByText('無期限')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('tab', { name: /トークン/ })).getByTitle(
+        '要確認',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('取得前の設定ページはトークンを読み込み中にする', () => {
+    location.hash = '#/settings/tokens';
+    mockDashboard({ data: null });
+    render(<DashboardPage />);
+    expect(screen.getByText('読み込み中…')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('tab', { name: /トークン/ })).queryByTitle(
+        '要確認',
+      ),
+    ).toBeNull();
+  });
+
+  describe('トークンの期限の警告', () => {
+    const withTokens = (tokens: DashboardResponse['tokens']) =>
+      mockDashboard({ data: dashboard({ tokens }) });
+
+    it('期限まで余裕があれば出さない', () => {
+      render(<DashboardPage />);
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.getByRole('link', { name: '設定' })).toBeInTheDocument();
+    });
+
+    it('期限が近い・切れた・無効なトークンを出し、設定ページのトークンへ案内する', () => {
+      withTokens({
+        github: { status: 'ok', data: { expiresAt: ago(-60 * 24 * 5) } },
+        cloudflare: { status: 'ok', data: { expiresAt: ago(10) } },
+      });
+      render(<DashboardPage />);
+      const [gh, cf] = screen.getAllByRole('alert');
+      expect(gh).toHaveTextContent(
+        'GitHub のトークンがあと 5 日で期限切れになります',
+      );
+      expect(gh).not.toHaveClass(tokenBannerDanger);
+      expect(cf).toHaveTextContent('Cloudflare のトークンの期限が切れています');
+      expect(cf).toHaveClass(tokenBannerDanger);
+      expect(within(gh).getByRole('link', { name: '確認' })).toHaveAttribute(
+        'href',
+        '#/settings/tokens',
+      );
+      expect(
+        screen.getByRole('link', { name: '設定（要確認）' }),
+      ).toHaveAttribute('href', '#/settings/tokens');
+    });
+
+    it('取得前は出さない', () => {
+      mockDashboard({ data: null });
+      render(<DashboardPage />);
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
   });
 
   describe('PR タブ', () => {

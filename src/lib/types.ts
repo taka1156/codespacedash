@@ -19,6 +19,7 @@ export type {
   RepoCandidatesResponse,
   RepoPulls,
   SectionState,
+  TokenInfo,
   WorkerBuild,
   WorkersBuildsSummary,
   WorkersPlan,

@@ -1,3 +1,4 @@
+import clsx from 'clsx';
 import { ActionsPanel } from '@/components/ActionsPanel/ActionsPanel';
 import { CloudflareUsagePanel } from '@/components/CloudflareUsagePanel/CloudflareUsagePanel';
 import { CodespacesPanel } from '@/components/CodespacesPanel/CodespacesPanel';
@@ -8,14 +9,17 @@ import { PanelTabs } from '@/components/shared/PanelTabs/PanelTabs';
 import { WorkersPanel } from '@/components/WorkersPanel/WorkersPanel';
 import { useDashboard } from '@/hooks/useDashboard';
 import { usePulls } from '@/hooks/usePulls';
+import { routeHref, useRoute } from '@/hooks/useRoute';
 import { type ServiceTab, useSettings } from '@/hooks/useSettings';
 import { usageValues } from '@/lib/cloudflareUsage';
 import { applyDebug, applyPullsDebug, resolvePlans } from '@/lib/debug';
 import { CLOUDFLARE_DAILY_FREE, CLOUDFLARE_STORAGE_FREE } from '@/lib/plans';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
 import { totalPulls } from '@/lib/pulls';
+import { alertText, tokenAlerts } from '@/lib/tokens';
 import type { DashboardResponse } from '@/lib/types';
 import { buildKind } from '@/lib/workerBuildKind';
+import { SettingsPage } from '../SettingsPage/SettingsPage';
 import {
   app,
   dashboardGrid,
@@ -24,6 +28,9 @@ import {
   previewBanner,
   serviceTabs,
   skeletonPanel,
+  tokenBanner,
+  tokenBannerDanger,
+  tokenBannerLink,
 } from './style.css';
 
 /** 反対側のタブを見ていても気づけるように、赤い点を出す条件 */
@@ -37,7 +44,10 @@ const cloudflareAlert = (d: DashboardResponse) =>
   d.cloudflare.builds.status === 'ok' &&
   d.cloudflare.builds.data.builds.some((b) => buildKind(b) === 'failure');
 
+// 取得したデータと設定はダッシュボードと設定ページで共有するので、
+// 画面の切り替えもここで行う（設定ページを開いても取り直さない）
 export const DashboardPage = () => {
+  const { route, navigate } = useRoute();
   const { settings, update, updateDebug } = useSettings();
   const {
     data: rawData,
@@ -56,6 +66,22 @@ export const DashboardPage = () => {
   const pullsTotal = totalPulls(pullsData?.pulls ?? null);
   const plans = resolvePlans(settings, data);
   const tab = settings.serviceTab;
+  const alerts = tokenAlerts(data);
+
+  if (route.page === 'settings') {
+    return (
+      <SettingsPage
+        section={route.section}
+        onSection={(section) => navigate({ page: 'settings', section })}
+        settings={settings}
+        plans={plans}
+        tokens={data?.tokens ?? null}
+        tokenAlert={alerts.length > 0}
+        onChange={update}
+        onChangeDebug={updateDebug}
+      />
+    );
+  }
 
   return (
     <div className={app}>
@@ -67,17 +93,33 @@ export const DashboardPage = () => {
         }}
         loading={loading || pulls.loading}
         lastFetched={lastFetched}
-        settings={settings}
-        plans={plans}
-        onChangeSettings={update}
-        onChangeDebug={updateDebug}
+        debug={settings.debug.enabled}
+        settingsAlert={alerts.length > 0}
       />
       <main className={main}>
+        {alerts.map((a) => (
+          <div
+            key={a.key}
+            role="alert"
+            className={clsx(
+              tokenBanner,
+              a.level !== 'warn' && tokenBannerDanger,
+            )}
+          >
+            <span>{alertText(a)}</span>
+            <a
+              className={tokenBannerLink}
+              href={routeHref({ page: 'settings', section: 'tokens' })}
+            >
+              確認
+            </a>
+          </div>
+        ))}
         {IS_STATIC_PREVIEW && (
           <div className={previewBanner}>
             静的プレビューです。表示はすべて疑似データで、GitHub や Cloudflare
             には接続していません。右上の設定（歯車）
-            →「デバッグ」で数値やプラン、取得状態を変えられます。
+            →「デバッグ」で数値やプラン、取得状態、トークンの期限を変えられます。
           </div>
         )}
         {error && (

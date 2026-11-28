@@ -2,11 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CSRF_HEADER, CSRF_VALUE } from '../shared/types';
 import type { Env } from './env';
 import worker from './index';
-import { CloudflareError, getWorkersBuilds } from './lib/cloudflare';
+import {
+  CloudflareError,
+  getCloudflareToken,
+  getWorkersBuilds,
+} from './lib/cloudflare';
 import { getCloudflareUsage } from './lib/cloudflareUsage';
 import {
   GithubError,
   getBillingSummary,
+  getGithubToken,
   getPremiumRequests,
   getUser,
   listCodespaces,
@@ -25,12 +30,14 @@ vi.mock('./lib/github', async (importOriginal) => ({
   listCodespaces: vi.fn(),
   getBillingSummary: vi.fn(),
   getPremiumRequests: vi.fn(),
+  getGithubToken: vi.fn(),
   listRecentRuns: vi.fn(),
   stopCodespace: vi.fn(),
 }));
 vi.mock('./lib/cloudflare', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./lib/cloudflare')>()),
   getWorkersBuilds: vi.fn(),
+  getCloudflareToken: vi.fn(),
 }));
 vi.mock('./lib/cloudflareUsage', () => ({ getCloudflareUsage: vi.fn() }));
 vi.mock('./lib/pulls', async (importOriginal) => ({
@@ -136,6 +143,9 @@ describe('GET /api/dashboard', () => {
     });
     vi.mocked(listRecentRuns).mockRejectedValue(new GithubError(403, 'no'));
     vi.mocked(getPremiumRequests).mockRejectedValue(new Error('boom'));
+    vi.mocked(getGithubToken).mockResolvedValue({
+      expiresAt: '2026-12-03T00:00:00.000Z',
+    });
   };
 
   it('項目ごとに取得状態を返す（1つ失敗しても他は返す）', async () => {
@@ -171,6 +181,16 @@ describe('GET /api/dashboard', () => {
           setting: 'CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID',
         },
       },
+      tokens: {
+        github: {
+          status: 'ok',
+          data: { expiresAt: '2026-12-03T00:00:00.000Z' },
+        },
+        cloudflare: {
+          status: 'unconfigured',
+          setting: 'CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID',
+        },
+      },
       notifyAfterMin: 45,
       fetchedAt: NOW.toISOString(),
     });
@@ -179,6 +199,7 @@ describe('GET /api/dashboard', () => {
       month: 11,
     });
     expect(getWorkersBuilds).not.toHaveBeenCalled();
+    expect(getCloudflareToken).not.toHaveBeenCalled();
   });
 
   it('Cloudflare が設定されていれば Workers Builds と使用量も取る', async () => {
@@ -192,6 +213,9 @@ describe('GET /api/dashboard', () => {
       dayStart: '',
       monthStart: '',
     } as never);
+    vi.mocked(getCloudflareToken).mockRejectedValue(
+      new CloudflareError(403, 'Invalid API Token'),
+    );
     const res = await call(
       '/api/dashboard',
       {},
@@ -199,8 +223,14 @@ describe('GET /api/dashboard', () => {
     );
     const body = await res.json<{
       cloudflare: Record<string, { status: string }>;
+      tokens: Record<string, unknown>;
       notifyAfterMin: number;
     }>();
+    expect(body.tokens.cloudflare).toEqual({
+      status: 'forbidden',
+      permission: 'トークンの再発行',
+      message: 'Invalid API Token',
+    });
     expect(body.cloudflare.builds).toMatchObject({
       status: 'forbidden',
       permission: expect.stringContaining('Workers Builds Configuration'),

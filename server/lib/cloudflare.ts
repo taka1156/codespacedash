@@ -1,4 +1,8 @@
-import type { WorkerBuild, WorkersBuildsSummary } from '../../shared/types';
+import type {
+  TokenInfo,
+  WorkerBuild,
+  WorkersBuildsSummary,
+} from '../../shared/types';
 import type { Env } from '../env';
 import {
   type AccountLimits,
@@ -27,23 +31,16 @@ interface Envelope<T> {
   result_info?: { page?: number; total_pages?: number };
 }
 
-const cf = async <T>(env: Env, path: string): Promise<Envelope<T>> => {
-  const { CLOUDFLARE_API_TOKEN: token, CLOUDFLARE_ACCOUNT_ID: account } = env;
-  if (!token || !account) {
-    throw new CloudflareError(
-      500,
-      'CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID が設定されていません',
-    );
-  }
-  const res = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}${path}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'User-Agent': 'codespacedash',
-      },
+const API = 'https://api.cloudflare.com/client/v4';
+
+/** url は API のベースからのパス（アカウント単位なら /accounts/{id}/…） */
+const cfFetch = async <T>(token: string, url: string): Promise<Envelope<T>> => {
+  const res = await fetch(`${API}${url}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'User-Agent': 'codespacedash',
     },
-  );
+  });
   let body: Envelope<T> | null = null;
   try {
     body = (await res.json()) as Envelope<T>;
@@ -60,6 +57,46 @@ const cf = async <T>(env: Env, path: string): Promise<Envelope<T>> => {
     throw new CloudflareError(forbidden ? 403 : res.status, message);
   }
   return body;
+};
+
+const cf = async <T>(env: Env, path: string): Promise<Envelope<T>> => {
+  const { CLOUDFLARE_API_TOKEN: token, CLOUDFLARE_ACCOUNT_ID: account } = env;
+  if (!token || !account) {
+    throw new CloudflareError(
+      500,
+      'CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID が設定されていません',
+    );
+  }
+  return cfFetch<T>(token, `/accounts/${encodeURIComponent(account)}${path}`);
+};
+
+// ── トークンの期限 ──
+
+interface RawTokenVerify {
+  status: 'active' | 'disabled' | 'expired' | (string & {});
+  expires_on?: string | null;
+}
+
+/**
+ * CLOUDFLARE_API_TOKEN の期限。Builds API 用のユーザー単位のトークンなので /user/tokens/verify で確かめる。
+ * 期限切れ（expired）は期限の日時をそのまま返し、画面で「期限切れ」と出す
+ */
+export const getCloudflareToken = async (env: Env): Promise<TokenInfo> => {
+  const token = env.CLOUDFLARE_API_TOKEN;
+  if (!token) {
+    throw new CloudflareError(500, 'CLOUDFLARE_API_TOKEN が設定されていません');
+  }
+  const { result } = await cfFetch<RawTokenVerify>(
+    token,
+    '/user/tokens/verify',
+  );
+  if (result.status !== 'active' && result.status !== 'expired') {
+    throw new CloudflareError(
+      403,
+      `CLOUDFLARE_API_TOKEN が無効です（${result.status}）`,
+    );
+  }
+  return { expiresAt: result.expires_on ?? null };
 };
 
 // ── API の生データ ──
