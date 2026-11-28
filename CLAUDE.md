@@ -4,11 +4,11 @@ QuotaDash（GitHub・Cloudflare の利用枠ダッシュボード）で作業す
 
 ## ブランチ運用
 
-- `master`: 本番。push すると GitHub Pages の静的プレビューがデプロイされる
-- `develop`: 開発の統合先。**作業ブランチの PR は `develop` 向けに作る**（GitHub の既定ブランチは `master` なので、PR の base を必ず `develop` にする）
-- 作業ブランチは `develop` から切る。名前は `feat/…` `fix/…` `chore/…` `docs/…` `test/…` など
-- リリースは `develop` → `master` の PR で行う。`master` に直接入った変更は `master` → `develop` の PR で戻す
-- Renovate の PR も `develop` 向け（`renovate.jsonc` の `baseBranchPatterns`）
+- **`develop` が中心**。作業ブランチは必ず `develop` から切り、PR も `develop` 向けに作る（GitHub の既定ブランチは `master` なので、PR の base を必ず `develop` にする）
+- 作業ブランチの名前は `feat/…` `fix/…` `chore/…` `docs/…` `test/…` など
+- `master` は本番。**直接触らない**（作業ブランチを切らない・push しない・PR を向けない）。push すると GitHub Pages の静的プレビューがデプロイされる
+- `develop` から `master` へのリリースはオーナーが行う
+- Renovate も `develop` を基準に動く（`renovate.jsonc` の `baseBranchPatterns`）
 - コミットメッセージは `feat: 〜` `fix: 〜` `chore: 〜` の形で、本文は日本語。目的の違う変更（設定変更と機能追加など）はコミットを分ける
 
 ## よく使うコマンド
