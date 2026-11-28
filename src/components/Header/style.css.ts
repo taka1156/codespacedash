@@ -162,42 +162,12 @@ export const btnGhost = style({
   },
 });
 
-/** アイコン + 文字のボタン。アイコンと文字の縦位置を揃える */
-export const btnIconText = style({
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  lineHeight: 1.4,
-});
-
-globalStyle(`${btnIconText} svg`, {
-  fontSize: '14px',
-});
-
-export const btnNotifyOn = style({
-  borderColor: 'rgba(74, 222, 128, 0.35)',
-  color: 'var(--green)',
-});
-
 export const hideOnMobile = style({
   '@media': {
     '(max-width: 600px)': {
       display: 'none',
     },
   },
-});
-
-export const pushError = style({
-  position: 'absolute',
-  right: 16,
-  top: 'calc(100% + 6px)',
-  maxWidth: 320,
-  padding: '8px 12px',
-  borderRadius: 'var(--radius-sm)',
-  background: 'var(--bg-card)',
-  border: '1px solid rgba(248, 113, 113, 0.35)',
-  color: 'var(--red)',
-  fontSize: '0.78rem',
 });
 
 export const debugBadge = style({
@@ -219,4 +189,36 @@ export const debugBadge = style({
       marginTop: -10,
     },
   },
+});
+
+export const settingsLink = style({
+  position: 'relative',
+  width: 32,
+  height: 32,
+  borderRadius: 8,
+  background: 'var(--bg-card)',
+  color: 'var(--text-muted)',
+  fontSize: '16px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'color 0.2s, background 0.2s',
+  selectors: {
+    '&:hover': {
+      color: 'var(--text)',
+      background: 'var(--bg-hover)',
+    },
+  },
+});
+
+/** 設定ページで確認してほしいことがあるときの点（トークンの期限など） */
+export const alertDot = style({
+  position: 'absolute',
+  top: 4,
+  right: 4,
+  width: 7,
+  height: 7,
+  borderRadius: '50%',
+  background: 'var(--yellow)',
+  boxShadow: '0 0 0 2px var(--bg-card)',
 });

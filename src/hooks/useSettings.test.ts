@@ -62,6 +62,7 @@ describe('useSettings', () => {
         actionsMinutes: '3',
         workersMinutes: '4',
         copilotUsd: '5',
+        githubTokenDays: '6',
       },
     };
     localStorage.setItem(KEY, JSON.stringify(saved));

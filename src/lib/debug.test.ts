@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { EMPTY_DEBUG, type Settings } from '@/hooks/useSettings';
 import { codespacesQuota } from './codespacesQuota';
 import { applyDebug, applyPullsDebug, resolvePlans } from './debug';
@@ -43,6 +43,10 @@ const data = (usageItems: BillingUsageItem[]): DashboardResponse => ({
   cloudflare: {
     builds: { status: 'unconfigured', setting: 'CLOUDFLARE_API_TOKEN' },
     usage: { status: 'unconfigured', setting: 'CLOUDFLARE_API_TOKEN' },
+  },
+  tokens: {
+    github: { status: 'ok', data: { expiresAt: null } },
+    cloudflare: { status: 'unconfigured', setting: 'CLOUDFLARE_API_TOKEN' },
   },
   notifyAfterMin: 60,
   fetchedAt: '2026-11-26T00:00:00Z',
@@ -332,8 +336,34 @@ describe('applyDebug（取得状態の上書き：未設定・エラー）', () 
       [
         ...Object.values(out?.github ?? {}),
         ...Object.values(out?.cloudflare ?? {}),
+        ...Object.values(out?.tokens ?? {}),
       ].map((s) => s.status),
-    ).toEqual(Array(6).fill('error'));
+    ).toEqual(Array(8).fill('error'));
+  });
+});
+
+describe('applyDebug（トークンの期限）', () => {
+  it('GitHub トークンの期限を今から N 日後にする（Cloudflare はそのまま）', () => {
+    vi.useFakeTimers({ now: new Date('2026-11-27T05:00:00Z') });
+    const out = applyDebug(data(real), settings({ githubTokenDays: '5' }));
+    expect(out?.tokens.github).toEqual({
+      status: 'ok',
+      data: { expiresAt: '2026-12-02T05:00:00.000Z' },
+    });
+    expect(out?.tokens.cloudflare.status).toBe('unconfigured');
+  });
+
+  it('空欄なら実データのまま', () => {
+    const d = data(real);
+    expect(applyDebug(d, settings({}))?.tokens).toEqual(d.tokens);
+  });
+
+  it('取得状態の上書きはトークンにも効く', () => {
+    const out = applyDebug(data(real), settings({ sectionState: 'forbidden' }));
+    expect(out?.tokens.github).toMatchObject({
+      status: 'forbidden',
+      permission: 'トークンの再発行',
+    });
   });
 });
 

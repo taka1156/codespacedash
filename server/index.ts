@@ -13,6 +13,7 @@ import { type AppEnv, type Env, numVar } from './env';
 import { cloudflareAccess } from './lib/access';
 import {
   CloudflareError,
+  getCloudflareToken,
   getWorkersBuilds,
   workersConfigured,
 } from './lib/cloudflare';
@@ -21,6 +22,7 @@ import {
   currentPeriod,
   GithubError,
   getBillingSummary,
+  getGithubToken,
   getPremiumRequests,
   getUser,
   listCodespaces,
@@ -41,6 +43,7 @@ import {
   sendToAll,
 } from './lib/push';
 import { settle, unconfigured } from './lib/section';
+import { checkTokenExpiry } from './lib/tokenNotify';
 
 const api = new Hono<AppEnv>().basePath('/api');
 
@@ -65,6 +68,8 @@ const PERM = {
   builds: 'Workers Builds Configuration: Read と Workers Scripts: Read',
   // 使用量は項目ごとに判定するので、ここは全体が取れなかったとき用
   analytics: 'Account Analytics: Read',
+  // トークン自体が拒否されたとき（権限ではなく再発行が必要）
+  token: 'トークンの再発行',
 } as const;
 
 const CF_SETTING = 'CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID';
@@ -75,25 +80,38 @@ api.get('/dashboard', async (c) => {
 
   // 項目ごとに状態を返す（1つ失敗しても他のパネルは表示できる）
   const hasCf = workersConfigured(c.env);
-  const [codespaces, billing, runs, copilot, builds, usage] = await Promise.all(
-    [
-      settle(() => listCodespaces(c.env), PERM.codespaces),
-      settle(() => getBillingSummary(c.env, user.login, period), PERM.plan),
-      settle(() => listRecentRuns(c.env), PERM.actions),
-      settle(() => getPremiumRequests(c.env, user.login, period), PERM.plan),
-      hasCf
-        ? settle(() => getWorkersBuilds(c.env), PERM.builds)
-        : unconfigured<never>(CF_SETTING),
-      hasCf
-        ? settle(() => getCloudflareUsage(c.env), PERM.analytics)
-        : unconfigured<never>(CF_SETTING),
-    ],
-  );
+  const [
+    codespaces,
+    billing,
+    runs,
+    copilot,
+    builds,
+    usage,
+    githubToken,
+    cloudflareToken,
+  ] = await Promise.all([
+    settle(() => listCodespaces(c.env), PERM.codespaces),
+    settle(() => getBillingSummary(c.env, user.login, period), PERM.plan),
+    settle(() => listRecentRuns(c.env), PERM.actions),
+    settle(() => getPremiumRequests(c.env, user.login, period), PERM.plan),
+    hasCf
+      ? settle(() => getWorkersBuilds(c.env), PERM.builds)
+      : unconfigured<never>(CF_SETTING),
+    hasCf
+      ? settle(() => getCloudflareUsage(c.env), PERM.analytics)
+      : unconfigured<never>(CF_SETTING),
+    // getUser の応答を使い回すので、GitHub への追加のリクエストはない
+    settle(() => getGithubToken(c.env), PERM.token),
+    hasCf
+      ? settle(() => getCloudflareToken(c.env), PERM.token)
+      : unconfigured<never>(CF_SETTING),
+  ]);
 
   return c.json<DashboardResponse>({
     user,
     github: { codespaces, billing, runs, copilot },
     cloudflare: { builds, usage },
+    tokens: { github: githubToken, cloudflare: cloudflareToken },
     notifyAfterMin: numVar(c.env.NOTIFY_AFTER_MIN, 60),
     fetchedAt: new Date().toISOString(),
   });
@@ -177,6 +195,18 @@ api.onError((err, c) => {
 export default {
   fetch: api.fetch,
   async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(checkForgottenCodespaces(env));
+    // 片方が失敗しても、もう片方は最後まで動かす
+    ctx.waitUntil(
+      Promise.allSettled([
+        checkForgottenCodespaces(env),
+        checkTokenExpiry(env),
+      ]).then((results) => {
+        for (const r of results) {
+          if (r.status === 'rejected') {
+            console.error('scheduled task failed', r.reason);
+          }
+        }
+      }),
+    );
   },
 } satisfies ExportedHandler<Env>;
