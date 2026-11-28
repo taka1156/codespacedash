@@ -15,7 +15,9 @@
     "crons": ["*/15 * * * *"]
   },
 
-  // バージョンごとのプレビューURLは Access の対象外になりやすいので無効化
+  // workers.dev（本番）とバージョンごとのプレビューURLは Access の対象外になりやすいので無効化。
+  // アクセスはダッシュボードで設定したカスタムドメインだけにする
+  "workers_dev": false,
   "preview_urls": false,
 
   "observability": { "enabled": true },

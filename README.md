@@ -119,7 +119,9 @@ Yarn は `package.json` の `packageManager`（`yarn@1.22.22`）、Node.js は `
 ### 5. Cloudflare Access（Zero Trust）
 
 1. Zero Trust ダッシュボード → **Access → Applications → Add an application → Self-hosted**
-2. ドメインに Worker のホスト名（`codespacedash.<account>.workers.dev` またはカスタムドメイン）を指定
+2. ドメインに Worker のカスタムドメインを指定
+   - `wrangler.jsonc` で `workers_dev: false` / `preview_urls: false` にしているので、`*.workers.dev` の本番 URL とプレビュー URL では開けません。先に Worker の **設定 → ドメインとルート** でカスタムドメインを追加してください
+   - workers.dev で使いたい場合は `workers_dev` を `true` にして、そのホスト名を Access に指定します
 3. ポリシーで自分のメールアドレスだけを許可
 4. **Session Duration** は長め（例: 1 month）がおすすめ。PWA で毎回ログインせずに済みます
 5. 作成後に表示される **Application Audience (AUD) Tag** を `ACCESS_AUD`、チームドメイン（`<team>.cloudflareaccess.com`）を `ACCESS_TEAM_DOMAIN` として、変数とシークレットに追加（テキスト）
