@@ -5,7 +5,6 @@ import {
   IssueStrips,
   OutageHint,
   ScopedIssueStrips,
-  StatusFooter,
   StatusScope,
 } from './ServiceStatus';
 import { stripSevere } from './style.css';
@@ -100,19 +99,5 @@ describe('StatusScope', () => {
       </StatusScope>,
     );
     expect(container).toBeEmptyDOMElement();
-  });
-});
-
-describe('StatusFooter', () => {
-  it('両方のステータスページへのリンク', () => {
-    render(<StatusFooter />);
-    expect(
-      screen
-        .getAllByRole('link')
-        .map((a) => [a.textContent, a.getAttribute('href')]),
-    ).toEqual([
-      ['GitHub Status ↗', 'https://www.githubstatus.com'],
-      ['Cloudflare Status ↗', 'https://www.cloudflarestatus.com'],
-    ]);
   });
 });

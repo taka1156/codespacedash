@@ -72,12 +72,6 @@ const PANELS: Record<ServiceTab, Step[]> = {
 
 const TAIL: Step[] = [
   {
-    element: tourTarget('status'),
-    title: '公式ステータスページ',
-    description:
-      'GitHub・Cloudflare のステータスページを開きます。障害中は各パネルの上にも帯で表示します。',
-  },
-  {
     element: tourTarget('refresh'),
     title: '更新',
     description: '最新の値を取り直します。',
