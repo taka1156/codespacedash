@@ -1,9 +1,37 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, SessionExpiredError } from '@/lib/api';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
-import type { DashboardResponse } from '@/lib/types';
+import type {
+  DashboardApiResponse,
+  DashboardResponse,
+  WorkersBuildsResponse,
+} from '@/lib/types';
 
 const REFRESH_MS = 60_000;
+
+const messageOf = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/**
+ * /dashboard と /workers-builds を並べて取り、1つの DashboardResponse にまとめる。
+ * Workers Builds だけ取れなくても、ほかのパネルは表示する（セッション切れは全体のエラー）
+ */
+const fetchDashboard = async (): Promise<DashboardResponse> => {
+  const [dashboard, workers] = await Promise.all([
+    api.get<DashboardApiResponse>('/dashboard'),
+    api
+      .get<WorkersBuildsResponse>('/workers-builds')
+      .catch((e): WorkersBuildsResponse => {
+        if (e instanceof SessionExpiredError) {
+          throw e;
+        }
+        return { builds: { status: 'error', message: messageOf(e) } };
+      }),
+  ]);
+  return {
+    ...dashboard,
+    cloudflare: { ...dashboard.cloudflare, builds: workers.builds },
+  };
+};
 
 // Badging API（インストールしたPWAのアイコンに数字を出す）。非対応環境では何もしない
 const setAppBadge = (count: number) => {
@@ -37,13 +65,13 @@ export const useDashboard = () => {
     try {
       do {
         pending.current = false;
-        setData(await api.get<DashboardResponse>('/dashboard'));
+        setData(await fetchDashboard());
       } while (pending.current);
     } catch (e) {
       if (e instanceof SessionExpiredError) {
         setSessionExpired(true);
       }
-      setError(e instanceof Error ? e.message : String(e));
+      setError(messageOf(e));
     } finally {
       inFlight.current = false;
       pending.current = false;
