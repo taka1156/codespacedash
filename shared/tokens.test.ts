@@ -43,6 +43,18 @@ describe('tokenStatus', () => {
     });
   });
 
+  it.each(['tomorrow', '2026-13-45T00:00:00Z', ''])(
+    '期限が読めなければ（%s）有効と取り違えずにエラー',
+    (raw) => {
+      expect(tokenStatus(ok(raw), now)).toEqual({
+        level: 'error',
+        expiresAt: null,
+        daysLeft: null,
+        message: `トークンの期限を読み取れません: ${raw}`,
+      });
+    },
+  );
+
   it('既定は今の時刻で判定する', () => {
     expect(tokenStatus(ok(inDays(10_000))).level).toBe('ok');
   });
