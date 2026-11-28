@@ -50,6 +50,7 @@ CI（`.github/workflows/test.yml`）は PR ごとに `yarn lint` → `yarn typec
   - Worker の疑似環境: `server/testing/fakeEnv.ts`（`fakeEnv()`・`fakeKv()`・`json()`）
   - 静的プレビューの切り替え: `src/testing/previewMock.ts`（`setPreview(true)`）
 - 外部 API（GitHub・Cloudflare）には実際にアクセスしない。`fetch` を `vi.stubGlobal` で差し替える
+- テストの書き方・カバレッジが足りないときの直し方は `.claude/skills/test/SKILL.md`（test スキル）にまとめている
 
 ## 実装のメモ
 
