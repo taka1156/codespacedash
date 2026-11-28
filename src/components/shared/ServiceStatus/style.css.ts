@@ -42,20 +42,3 @@ export const hint = style({
   fontSize: '0.75rem',
   color: 'var(--yellow)',
 });
-
-export const footer = style({
-  display: 'flex',
-  justifyContent: 'center',
-  flexWrap: 'wrap',
-  gap: 16,
-  padding: '16px 0 4px',
-  fontSize: '0.75rem',
-});
-
-export const footerLink = style({
-  color: 'var(--text-muted)',
-  textDecoration: 'none',
-  selectors: {
-    '&:hover': { color: 'var(--text)', textDecoration: 'underline' },
-  },
-});

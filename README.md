@@ -150,7 +150,7 @@ Yarn は `package.json` の `packageManager`（`yarn@1.22.22`）、Node.js は `
 
 ### サービスの障害
 
-[GitHub Status](https://www.githubstatus.com) と [Cloudflare Status](https://www.cloudflarestatus.com) の `summary.json`（認証不要）を Worker が5分キャッシュして、見ているコンポーネントのうち正常でないものだけを出します。普段は何も出さず、画面の下にステータスページへのリンクだけを置いています。
+[GitHub Status](https://www.githubstatus.com) と [Cloudflare Status](https://www.cloudflarestatus.com) の `summary.json`（認証不要）を Worker が5分キャッシュして、見ているコンポーネントのうち正常でないものだけを出します。普段は何も出しません（障害があるときだけ、帯からステータスページを開けます）。
 
 | 出す場所 | GitHub | Cloudflare |
 |---|---|---|

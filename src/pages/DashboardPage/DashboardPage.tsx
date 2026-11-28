@@ -3,12 +3,12 @@ import { ActionsPanel } from '@/components/ActionsPanel/ActionsPanel';
 import { CloudflareUsagePanel } from '@/components/CloudflareUsagePanel/CloudflareUsagePanel';
 import { CodespacesPanel } from '@/components/CodespacesPanel/CodespacesPanel';
 import { CopilotPanel } from '@/components/CopilotPanel/CopilotPanel';
+import { Footer } from '@/components/Footer/Footer';
 import { Header } from '@/components/Header/Header';
 import { PullsPanel } from '@/components/PullsPanel/PullsPanel';
 import { PanelTabs } from '@/components/shared/PanelTabs/PanelTabs';
 import {
   IssueStrips,
-  StatusFooter,
   StatusScope,
 } from '@/components/shared/ServiceStatus/ServiceStatus';
 import { WorkersPanel } from '@/components/WorkersPanel/WorkersPanel';
@@ -277,8 +277,8 @@ export const DashboardPage = () => {
             </StatusScope>
           </div>
         )}
-        <StatusFooter />
       </main>
+      <Footer />
     </div>
   );
 };

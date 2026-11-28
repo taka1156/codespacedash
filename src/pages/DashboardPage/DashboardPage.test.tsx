@@ -219,10 +219,11 @@ describe('DashboardPage', () => {
   it('データがなく取得中でもなければ何も出さない', () => {
     mockDashboard({ data: null, loading: false });
     const { container } = render(<DashboardPage />);
-    // タブの次はフッター（ステータスページへのリンク）だけ
-    expect(
-      container.querySelector('main > footer')?.previousElementSibling,
-    ).toHaveAttribute('role', 'tablist');
+    // タブだけで、その後には何もない
+    expect(container.querySelector('main')?.lastElementChild).toHaveAttribute(
+      'role',
+      'tablist',
+    );
   });
 
   it('エラーを出す', () => {
@@ -323,13 +324,19 @@ describe('DashboardPage', () => {
       screen.queryAllByRole('status').map((s) => s.textContent);
     const tab = (name: RegExp) => screen.getByRole('tab', { name });
 
-    it('障害がなければ帯も印も出さず、フッターのリンクだけ', () => {
+    it('障害がなければ帯も印もステータスページへのリンクも出さない', () => {
       render(<DashboardPage />);
       expect(strips()).toEqual([]);
       expect(screen.queryByTitle('サービスで障害が発生中')).toBeNull();
-      expect(
-        screen.getByRole('link', { name: 'GitHub Status ↗' }),
-      ).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: / Status ↗$/ })).toBeNull();
+    });
+
+    it('フッターはコピーライトとリポジトリへのリンクだけで、main の外に出す', () => {
+      const { container } = render(<DashboardPage />);
+      const footer = screen.getByRole('contentinfo');
+      expect(footer.closest('main')).toBeNull();
+      expect(container.querySelector('main')?.nextElementSibling).toBe(footer);
+      expect(footer).not.toHaveTextContent('Status');
     });
 
     it('GitHub のパネルに自分のコンポーネントの帯を出し、API の障害はタブの上に1回だけ出す', () => {
@@ -508,9 +515,9 @@ describe('DashboardPage', () => {
   });
 
   it.each([
-    ['github', /GitHub/, 8],
-    ['cloudflare', /Cloudflare/, 8],
-    ['pulls', /PR/, 6],
+    ['github', /GitHub/, 7],
+    ['cloudflare', /Cloudflare/, 7],
+    ['pulls', /PR/, 5],
   ] as const)('%s タブはツアーの手順がすべて画面にある', (key, name, n) => {
     mockPulls({
       data: { pulls: { status: 'ok', data: [] }, fetchedAt: NOW.toISOString() },
