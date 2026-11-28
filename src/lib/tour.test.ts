@@ -18,7 +18,7 @@ const mount = (targets: string[], panels = 0) => {
     .join('');
 };
 
-const ALL = ['tabs', 'panels', 'status', 'refresh', 'settings', 'help'];
+const ALL = ['tabs', 'panels', 'refresh', 'settings', 'help'];
 const titles = (tab: Parameters<typeof tourSteps>[0]) =>
   tourSteps(tab).map((s) => s.popover?.title);
 
@@ -41,7 +41,6 @@ describe('tourSteps', () => {
       'Codespaces',
       'Actions',
       'Copilot',
-      '公式ステータスページ',
       '更新',
       '設定',
       '使い方',
@@ -59,7 +58,7 @@ describe('tourSteps', () => {
 
   it('PR タブはパネル1つ', () => {
     mount(ALL, 1);
-    expect(titles('pulls')).toHaveLength(6);
+    expect(titles('pulls')).toHaveLength(5);
     expect(titles('pulls')[1]).toBe('オープンな PR');
   });
 
