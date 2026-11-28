@@ -79,7 +79,41 @@ describe('sumRows', () => {
   });
 });
 
+describe('usagePeriods（境界値）', () => {
+  it('UTC の 23:59:59.999 まではその日、00:00 からは次の日', () => {
+    expect(usagePeriods(new Date('2026-11-27T23:59:59.999Z')).today).toBe(
+      '2026-11-27',
+    );
+    expect(usagePeriods(new Date('2026-11-28T00:00:00.000Z')).today).toBe(
+      '2026-11-28',
+    );
+  });
+
+  it('1/1 の昨日は前年の 12/31、今月は1月', () => {
+    expect(usagePeriods(new Date('2027-01-01T00:00:00Z'))).toMatchObject({
+      today: '2027-01-01',
+      yesterday: '2026-12-31',
+      monthStart: '2027-01-01T00:00:00.000Z',
+    });
+  });
+});
+
 describe('latestPerKey', () => {
+  it('同じキー・同じ時刻の行が重なったら、先に来た方を残す', () => {
+    const rows = [
+      { k: 'a', t: '2026-11-27', v: 100 },
+      { k: 'a', t: '2026-11-27', v: 999 },
+    ];
+    expect(
+      latestPerKey(
+        rows,
+        (r) => r.k,
+        (r) => r.t,
+        (r) => r.v,
+      ),
+    ).toBe(100);
+  });
+
   it('キーごとの最新値だけを合計する（日ごとに足して二重に数えない）', () => {
     const rows = [
       { k: 'a', t: '2026-11-26', v: 100 },

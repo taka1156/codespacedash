@@ -131,6 +131,33 @@ describe('checkForgottenCodespaces', () => {
     expect(e.KV.puts[0].options).toEqual({ expirationTtl: 60 });
   });
 
+  it('60分未満は分だけで出す（59分 → 1時間0分 の境目の手前）', async () => {
+    vi.mocked(listCodespaces).mockResolvedValue([
+      cs({ last_used_at: ago(59.99) }),
+    ]);
+    await checkForgottenCodespaces(env({ NOTIFY_AFTER_MIN: '30' }));
+    expect(sendToAll).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ body: 'my app（me/app）最終使用から59分' }),
+    );
+  });
+
+  it.each([
+    ['2', 60],
+    ['3', 60],
+    ['4', 120],
+  ])(
+    '再通知の間隔 %s 分の TTL は %s 秒（2分短くし、60秒を下回らない）',
+    async (remind, ttl) => {
+      vi.mocked(listCodespaces).mockResolvedValue([
+        cs({ last_used_at: ago(60) }),
+      ]);
+      const e = env({ REMIND_EVERY_MIN: remind });
+      await checkForgottenCodespaces(e);
+      expect(e.KV.puts[0].options).toEqual({ expirationTtl: ttl });
+    },
+  );
+
   it('最終使用時刻がなければ 0分扱い（通知しない）', async () => {
     vi.mocked(listCodespaces).mockResolvedValue([cs({ last_used_at: null })]);
     await checkForgottenCodespaces(env());

@@ -28,6 +28,13 @@ describe('isRepoName', () => {
     }
   });
 
+  it('owner は 39文字、リポジトリ名は 100文字まで', () => {
+    expect(isRepoName(`${'a'.repeat(39)}/repo`)).toBe(true);
+    expect(isRepoName(`${'a'.repeat(40)}/repo`)).toBe(false);
+    expect(isRepoName(`owner/${'r'.repeat(100)}`)).toBe(true);
+    expect(isRepoName(`owner/${'r'.repeat(101)}`)).toBe(false);
+  });
+
   it('. で始まるだけのリポジトリ名は受け付ける', () => {
     expect(isRepoName('owner/.github')).toBe(true);
   });
