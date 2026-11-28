@@ -125,6 +125,8 @@ describe('RunHistory', () => {
         { status: 'in_progress', startedAt: at(90), updatedAt: at(80) },
         '1分30秒',
       ],
+      // 時刻が読めなければ NaN と出さない
+      [{ startedAt: 'x', updatedAt: at(0) }, '—'],
     ] as const)('%o は %s', (p, text) => {
       render(<RunHistory runs={ok([run(p)])} />);
       expect(items()[0]).toHaveTextContent(`#7${text}`);

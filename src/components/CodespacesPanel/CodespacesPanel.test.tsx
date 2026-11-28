@@ -231,6 +231,22 @@ describe('CodespacesPanel', () => {
       expect(c).not.toHaveTextContent('自動削除');
     });
 
+    it('日時が読めなければ NaN と出さない（最終使用は —、自動削除は出さない）', () => {
+      panel(
+        ok([
+          codespace({
+            state: 'Shutdown',
+            last_used_at: 'x',
+            retention_expires_at: 'x',
+          }),
+        ]),
+      );
+      const [a] = items();
+      expect(a).toHaveTextContent('最終使用: —');
+      expect(a).not.toHaveTextContent('自動削除');
+      expect(a).not.toHaveTextContent('NaN');
+    });
+
     it('稼働中は出さない', () => {
       panel(ok([codespace({ retention_expires_at: until(3) })]));
       expect(items()[0]).not.toHaveTextContent('自動削除');

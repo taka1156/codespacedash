@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import { fmtAgo, UNKNOWN } from '@/lib/format';
 import { WORKERS_PLANS, type WorkersPlan } from '@/lib/plans';
 import { statusText } from '@/lib/sectionStatus';
 import type {
@@ -45,24 +46,13 @@ const SOURCE_LABEL: Record<string, string> = {
   api: 'API',
 };
 
-const fmtAgo = (iso: string) => {
-  const min = (Date.now() - new Date(iso).getTime()) / 60_000;
-  if (min < 1) {
-    return 'たった今';
-  }
-  if (min < 60) {
-    return `${Math.floor(min)}分前`;
-  }
-  if (min < 1440) {
-    return `${Math.floor(min / 60)}時間前`;
-  }
-  return `${Math.floor(min / 1440)}日前`;
-};
-
 const fmtDuration = (b: WorkerBuild) => {
   const start = new Date(b.startedAt ?? b.createdAt).getTime();
   const end = b.stoppedAt ? new Date(b.stoppedAt).getTime() : Date.now();
   const sec = Math.max(0, Math.round((end - start) / 1000));
+  if (Number.isNaN(sec)) {
+    return UNKNOWN;
+  }
   return sec < 60 ? `${sec}秒` : `${Math.floor(sec / 60)}分${sec % 60}秒`;
 };
 
