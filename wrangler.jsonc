@@ -41,5 +41,14 @@
     "NOTIFY_AFTER_MIN": "60",
     "REMIND_EVERY_MIN": "60",
     "TIMEZONE": "Asia/Tokyo"
+  },
+
+  // Preview でも本番と同じ通知の間隔・タイムゾーンで動かす
+  "previews": {
+    "vars": {
+      "NOTIFY_AFTER_MIN": "60",
+      "REMIND_EVERY_MIN": "60",
+      "TIMEZONE": "Asia/Tokyo"
+    }
   }
 }
