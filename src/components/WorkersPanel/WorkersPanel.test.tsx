@@ -174,6 +174,8 @@ describe('WorkersPanel', () => {
     [{ status: 'running', startedAt: ago(1.5), stoppedAt: null }, '1分30秒'],
     // 時刻が逆転していても 0秒
     [{ startedAt: ago(0), stoppedAt: ago(1) }, '0秒'],
+    // 時刻が読めなければ NaN と出さない
+    [{ startedAt: 'x', stoppedAt: ago(0) }, '—'],
   ] as const)('所要時間 %o は %s', (p, text) => {
     panel(ok({ builds: [build(p)] }));
     expect(lastMeta(items()[0])).toBe(text);

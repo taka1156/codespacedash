@@ -3,6 +3,10 @@ import type { BillingUsageSummary } from './types';
 
 const BASE_CORES = 2;
 
+/** 2コア換算の無料枠（時間）。プランの枠はコア時間なので2で割る */
+export const codespacesFreeHours = (plan: GithubPlan) =>
+  GITHUB_PLANS[plan].codespacesCoreHours / BASE_CORES;
+
 export interface QuotaUsage {
   /** 2コア換算の使用時間 */
   usedHours: number;
@@ -76,7 +80,7 @@ export function codespacesQuota(
 
   return {
     usedHours: coreHours / BASE_CORES,
-    freeHours: GITHUB_PLANS[plan].codespacesCoreHours / BASE_CORES,
+    freeHours: codespacesFreeHours(plan),
     usedStorageGbMonth: storageGbMonth,
     freeStorageGbMonth: GITHUB_PLANS[plan].codespacesStorageGbMonth,
   };
