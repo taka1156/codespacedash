@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useDashboard } from '@/hooks/useDashboard';
 import { usePulls } from '@/hooks/usePulls';
 import { usePush } from '@/hooks/usePush';
+import { startTour, tourSteps } from '@/lib/tour';
 import type {
   ComponentStatus,
   DashboardResponse,
@@ -33,6 +34,10 @@ vi.mock('@/lib/preview', () =>
 );
 vi.mock('@/hooks/useDashboard', () => ({ useDashboard: vi.fn() }));
 vi.mock('@/hooks/usePush', () => ({ usePush: vi.fn() }));
+vi.mock('@/lib/tour', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/tour')>()),
+  startTour: vi.fn(),
+}));
 vi.mock('@/hooks/usePulls', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/hooks/usePulls')>()),
   usePulls: vi.fn(),
@@ -490,5 +495,36 @@ describe('DashboardPage', () => {
     expect(
       screen.getByRole('button', { name: /example\/web-app/ }),
     ).toBeInTheDocument();
+  });
+
+  it('ヘルプボタンで開いているタブのツアーを始める', () => {
+    vi.mocked(startTour).mockClear();
+    render(<DashboardPage />);
+    fireEvent.click(screen.getByRole('button', { name: '使い方' }));
+    expect(startTour).toHaveBeenLastCalledWith('github');
+    fireEvent.click(tab(/Cloudflare/));
+    fireEvent.click(screen.getByRole('button', { name: '使い方' }));
+    expect(startTour).toHaveBeenLastCalledWith('cloudflare');
+  });
+
+  it.each([
+    ['github', /GitHub/, 8],
+    ['cloudflare', /Cloudflare/, 8],
+    ['pulls', /PR/, 6],
+  ] as const)('%s タブはツアーの手順がすべて画面にある', (key, name, n) => {
+    mockPulls({
+      data: { pulls: { status: 'ok', data: [] }, fetchedAt: NOW.toISOString() },
+    });
+    render(<DashboardPage />);
+    fireEvent.click(tab(name));
+    expect(tourSteps(key)).toHaveLength(n);
+  });
+
+  it('取得前はパネルの手順を飛ばす', () => {
+    mockDashboard({ data: null, loading: true });
+    render(<DashboardPage />);
+    expect(tourSteps('github').map((s) => s.popover?.title)).not.toContain(
+      'Codespaces',
+    );
   });
 });

@@ -18,12 +18,15 @@ export const PanelTabs = <K extends string>({
   onChange,
   label,
   className,
+  tour,
 }: {
   items: PanelTab<K>[];
   current: K;
   onChange: (key: K) => void;
   label: string;
   className?: string;
+  /** 使い方ツアーで指すための目印 */
+  tour?: string;
 }) => {
   const id = useId();
   const onKeyDown = (e: KeyboardEvent) => {
@@ -39,7 +42,12 @@ export const PanelTabs = <K extends string>({
     document.getElementById(`${id}-${next.key}`)?.focus();
   };
   return (
-    <div className={clsx(tabs, className)} role="tablist" aria-label={label}>
+    <div
+      className={clsx(tabs, className)}
+      role="tablist"
+      aria-label={label}
+      data-tour={tour}
+    >
       {items.map((t) => (
         <button
           key={t.key}
