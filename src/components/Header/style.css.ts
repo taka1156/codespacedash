@@ -222,3 +222,23 @@ export const alertDot = style({
   background: 'var(--yellow)',
   boxShadow: '0 0 0 2px var(--bg-card)',
 });
+
+/** ヘルプなど、歯車と同じ見た目の丸いアイコンボタン */
+export const iconButton = style({
+  width: 32,
+  height: 32,
+  borderRadius: 8,
+  background: 'var(--bg-card)',
+  color: 'var(--text-muted)',
+  fontSize: '16px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'color 0.2s, background 0.2s',
+  selectors: {
+    '&:hover': {
+      color: 'var(--cyan)',
+      background: 'var(--cyan-dim)',
+    },
+  },
+});

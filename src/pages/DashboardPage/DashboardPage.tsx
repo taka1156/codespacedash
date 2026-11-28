@@ -23,6 +23,7 @@ import { IS_STATIC_PREVIEW } from '@/lib/preview';
 import { totalPulls } from '@/lib/pulls';
 import { issuesFor, STATUS_COMPONENTS as SC } from '@/lib/serviceStatus';
 import { alertText, tokenAlerts } from '@/lib/tokens';
+import { startTour } from '@/lib/tour';
 import type { DashboardResponse } from '@/lib/types';
 import { buildKind } from '@/lib/workerBuildKind';
 import { SettingsPage } from '../SettingsPage/SettingsPage';
@@ -118,6 +119,7 @@ export const DashboardPage = () => {
         lastFetched={lastFetched}
         debug={settings.debug.enabled}
         settingsAlert={alerts.length > 0}
+        onHelp={() => startTour(tab)}
       />
       <main className={main}>
         {alerts.map((a) => (
@@ -165,6 +167,7 @@ export const DashboardPage = () => {
         <PanelTabs<ServiceTab>
           label="サービスの切り替え"
           className={serviceTabs}
+          tour="tabs"
           current={tab}
           onChange={(serviceTab) => update({ serviceTab })}
           items={[
@@ -195,11 +198,13 @@ export const DashboardPage = () => {
         {tab === 'pulls' ? (
           <StatusScope {...ghScope([SC.github.pulls])}>
             <IssueStrips service="github" issues={pullsIssues} />
-            <PullsPanel
-              favorites={settings.favorites}
-              pulls={pullsData?.pulls ?? null}
-              error={pulls.error}
-            />
+            <div data-tour="panels">
+              <PullsPanel
+                favorites={settings.favorites}
+                pulls={pullsData?.pulls ?? null}
+                error={pulls.error}
+              />
+            </div>
           </StatusScope>
         ) : !data ? (
           loading && (
@@ -210,7 +215,7 @@ export const DashboardPage = () => {
             </div>
           )
         ) : tab === 'github' ? (
-          <div className={dashboardGrid}>
+          <div className={dashboardGrid} data-tour="panels">
             <StatusScope {...ghScope([SC.github.codespaces])}>
               <CodespacesPanel
                 codespaces={data.github.codespaces}
@@ -235,7 +240,7 @@ export const DashboardPage = () => {
             </StatusScope>
           </div>
         ) : (
-          <div className={dashboardGrid}>
+          <div className={dashboardGrid} data-tour="panels">
             <StatusScope {...cfScope([SC.cloudflare.builds])}>
               <WorkersPanel
                 builds={data.cloudflare.builds}
