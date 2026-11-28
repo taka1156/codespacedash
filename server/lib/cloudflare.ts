@@ -124,15 +124,32 @@ interface RawBuild {
   trigger?: { external_script_id?: string | null } | null;
 }
 
+interface RawPreview {
+  preview_id: string;
+  branch?: string | null;
+}
+
 const WORKERS_LIMIT = 30;
+/** 1つの Worker で見る Preview の数（サブリクエストの上限に収めるため） */
+const PREVIEWS_LIMIT = 10;
 const LATEST_CHUNK = 20;
 const BUILDS_PER_PAGE = 50;
 const BUILDS_MAX_PAGES = 3;
 const BUILDS_LIMIT = 10;
 const CACHE_SEC = 60;
 
-const toBuild = (env: Env, worker: string, b: RawBuild): WorkerBuild => {
+/**
+ * preview はビルドした Preview の名前（ブランチ名）。本番のビルドなら undefined。
+ * Preview のビルドはダッシュボードでも Preview のページの下にある（/previews/{名前}/builds/{uuid}）
+ */
+const toBuild = (
+  env: Env,
+  worker: string,
+  b: RawBuild,
+  preview?: string,
+): WorkerBuild => {
   const m = b.build_trigger_metadata ?? {};
+  const base = `https://dash.cloudflare.com/${env.CLOUDFLARE_ACCOUNT_ID}/workers/services/view/${encodeURIComponent(worker)}/production`;
   return {
     id: b.build_uuid,
     worker,
@@ -146,7 +163,10 @@ const toBuild = (env: Env, worker: string, b: RawBuild): WorkerBuild => {
     createdAt: b.created_on,
     startedAt: b.initializing_on ?? b.running_on ?? null,
     stoppedAt: b.stopped_on ?? null,
-    dashboardUrl: `https://dash.cloudflare.com/${env.CLOUDFLARE_ACCOUNT_ID}/workers/services/view/${encodeURIComponent(worker)}/production/builds/${b.build_uuid}`,
+    dashboardUrl:
+      preview === undefined
+        ? `${base}/builds/${b.build_uuid}`
+        : `${base}/previews/${encodeURIComponent(preview)}/builds/${b.build_uuid}`,
   };
 };
 
@@ -178,16 +198,21 @@ const workersWithBuilds = async (env: Env, scripts: RawScript[]) => {
   return scripts.filter((s) => tags.has(s.tag));
 };
 
-/** 1つの Worker のビルドを、集計期間の始まりまでさかのぼって取る */
-const listBuilds = async (env: Env, script: RawScript, period: Period) => {
+/** ビルド一覧の path を、集計期間の始まりまでページをさかのぼって取る */
+const pagedBuilds = async (
+  env: Env,
+  path: string,
+  period: Period,
+  map: (b: RawBuild) => WorkerBuild,
+) => {
   const out: WorkerBuild[] = [];
   const start = new Date(period.start).getTime();
   for (let page = 1; page <= BUILDS_MAX_PAGES; page++) {
     const res = await cf<RawBuild[]>(
       env,
-      `/builds/workers/${encodeURIComponent(script.tag)}/builds?page=${page}&per_page=${BUILDS_PER_PAGE}`,
+      `${path}?page=${page}&per_page=${BUILDS_PER_PAGE}`,
     );
-    const builds = (res.result ?? []).map((b) => toBuild(env, script.id, b));
+    const builds = (res.result ?? []).map(map);
     out.push(...builds);
     const totalPages = res.result_info?.total_pages ?? page;
     if (
@@ -200,6 +225,56 @@ const listBuilds = async (env: Env, script: RawScript, period: Period) => {
     }
   }
   return out;
+};
+
+/**
+ * Preview（本番以外のブランチ）のビルド。Worker Previews のビルドは
+ * /builds/workers/{tag}/builds には入らず、Preview ごとの一覧にだけ入る。
+ * Preview を使っていない Worker もあるので、取れなければ空にする
+ */
+const listPreviewBuilds = async (
+  env: Env,
+  script: RawScript,
+  period: Period,
+) => {
+  const base = `/builds/workers/${encodeURIComponent(script.tag)}/previews`;
+  let previews: RawPreview[];
+  try {
+    previews =
+      (await cf<RawPreview[]>(env, `${base}?per_page=${PREVIEWS_LIMIT}`))
+        .result ?? [];
+  } catch {
+    return [];
+  }
+  const results = await Promise.allSettled(
+    previews
+      .slice(0, PREVIEWS_LIMIT)
+      .map((p) =>
+        pagedBuilds(
+          env,
+          `${base}/${encodeURIComponent(p.preview_id)}/builds`,
+          period,
+          (b) => toBuild(env, script.id, b, p.branch ?? p.preview_id),
+        ),
+      ),
+  );
+  return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+};
+
+/** 1つの Worker のビルド（本番 + Preview）。本番の一覧が取れなければエラー */
+const listBuilds = async (env: Env, script: RawScript, period: Period) => {
+  const [production, previews] = await Promise.all([
+    pagedBuilds(
+      env,
+      `/builds/workers/${encodeURIComponent(script.tag)}/builds`,
+      period,
+      (b) => toBuild(env, script.id, b),
+    ),
+    listPreviewBuilds(env, script, period),
+  ]);
+  // 両方に同じビルドが入っていても1回だけ数える
+  const ids = new Set(production.map((b) => b.id));
+  return [...production, ...previews.filter((b) => !ids.has(b.id))];
 };
 
 const getLimits = async (env: Env): Promise<AccountLimits | null> => {
