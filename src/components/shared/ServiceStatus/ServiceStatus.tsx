@@ -94,7 +94,7 @@ export const OutageHint = () => {
 
 /** いつも出す、公式ステータスページへのリンク */
 export const StatusFooter = () => (
-  <footer className={footer}>
+  <footer className={footer} data-tour="status">
     {(['github', 'cloudflare'] as const).map((s) => (
       <a key={s} className={footerLink} href={STATUS_PAGE[s].url} {...ext}>
         {STATUS_PAGE[s].name} ↗

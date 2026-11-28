@@ -15,6 +15,7 @@ import {
   headerLogo,
   headerRight,
   hideOnMobile,
+  iconButton,
   lastFetchedStyle,
   settingsLink,
   userInfo,
@@ -30,6 +31,8 @@ interface Props {
   debug: boolean;
   /** 設定ページで確認してほしいこと（トークンの期限など）があるか */
   settingsAlert: boolean;
+  /** ヘルプ（使い方ツアー）を始める */
+  onHelp: () => void;
 }
 
 export const Header = ({
@@ -39,6 +42,7 @@ export const Header = ({
   lastFetched,
   debug,
   settingsAlert,
+  onHelp,
 }: Props) => (
   <header className={header}>
     <div className={headerLeft}>
@@ -64,9 +68,20 @@ export const Header = ({
         disabled={loading}
         title="更新"
         aria-label="更新"
+        data-tour="refresh"
       >
         {/* ボタンではなくアイコンだけを回す（SVG の中心が軸） */}
         <Icon name="refresh" className={clsx(loading && btnRefreshSpinning)} />
+      </button>
+      <button
+        type="button"
+        className={iconButton}
+        onClick={onHelp}
+        title="使い方"
+        aria-label="使い方"
+        data-tour="help"
+      >
+        <Icon name="help" />
       </button>
       {/* 通知のオン/オフは設定ページの「通知」に移した */}
       <a
@@ -76,6 +91,7 @@ export const Header = ({
           section: settingsAlert ? 'tokens' : 'plans',
         })}
         title="設定"
+        data-tour="settings"
         aria-label={settingsAlert ? '設定（要確認）' : '設定'}
       >
         <Icon name="settings" />

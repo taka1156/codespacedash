@@ -11,6 +11,7 @@ vi.mock('@/lib/preview', () =>
 
 const header = (p: Partial<Parameters<typeof Header>[0]> = {}) => {
   const onRefresh = vi.fn();
+  const onHelp = vi.fn();
   render(
     <Header
       user={{
@@ -25,10 +26,11 @@ const header = (p: Partial<Parameters<typeof Header>[0]> = {}) => {
       lastFetched={NOW}
       debug={false}
       settingsAlert={false}
+      onHelp={onHelp}
       {...p}
     />,
   );
-  return { onRefresh };
+  return { onRefresh, onHelp };
 };
 
 describe('Header', () => {
@@ -107,5 +109,32 @@ describe('Header', () => {
   it('通知のボタンはヘッダーに出さない（設定ページに移した）', () => {
     header();
     expect(screen.queryByRole('button', { name: /通知/ })).toBeNull();
+  });
+
+  it('ヘルプボタンで使い方のツアーを始める', () => {
+    const { onHelp, onRefresh } = header();
+    const btn = screen.getByRole('button', { name: '使い方' });
+    expect(btn.querySelector('svg[data-icon="help"]')).not.toBeNull();
+    expect(btn).toHaveAttribute('data-tour', 'help');
+    fireEvent.click(btn);
+    expect(onHelp).toHaveBeenCalledTimes(1);
+    expect(onRefresh).not.toHaveBeenCalled();
+  });
+
+  it('ヘルプボタンは取得中でも押せる', () => {
+    header({ loading: true });
+    expect(screen.getByRole('button', { name: '使い方' })).toBeEnabled();
+  });
+
+  it('ツアーで指す更新・設定に目印を付ける', () => {
+    header();
+    expect(screen.getByRole('button', { name: '更新' })).toHaveAttribute(
+      'data-tour',
+      'refresh',
+    );
+    expect(screen.getByRole('link', { name: '設定' })).toHaveAttribute(
+      'data-tour',
+      'settings',
+    );
   });
 });
