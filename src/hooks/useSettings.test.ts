@@ -63,6 +63,7 @@ describe('useSettings', () => {
         workersMinutes: '4',
         copilotUsd: '5',
         githubTokenDays: '6',
+        serviceStatus: 'major_outage',
       },
     };
     localStorage.setItem(KEY, JSON.stringify(saved));
@@ -83,6 +84,7 @@ describe('useSettings', () => {
         debug: {
           enabled: 'yes',
           sectionState: 'broken',
+          serviceStatus: 'down',
           githubPlan: 'x',
           copilotPlan: 'x',
           workersPlan: 'x',

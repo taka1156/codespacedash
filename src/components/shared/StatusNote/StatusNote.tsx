@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import type { SectionState } from '@/lib/types';
+import { OutageHint } from '../ServiceStatus/ServiceStatus';
 import { detail, note, noteError, noteForbidden, noteTitle } from './style.css';
 
 type NotOk = Exclude<SectionState<unknown>, { status: 'ok' }>;
@@ -41,6 +42,7 @@ export const StatusNote = ({
         <div className={clsx(note, noteError)}>
           <span className={noteTitle}>⚠ {what}を取得できませんでした</span>
           <span className={detail}>{state.message}</span>
+          <OutageHint />
         </div>
       );
   }

@@ -1,7 +1,9 @@
 import { useId } from 'react';
 import {
   DEBUG_SECTION_STATES,
+  DEBUG_SERVICE_STATUSES,
   type DebugSectionState,
+  type DebugServiceStatus,
   type DebugSettings,
   EMPTY_DEBUG,
   SAMPLE_DEBUG,
@@ -17,6 +19,7 @@ import {
   WORKERS_PLANS,
 } from '@/lib/plans';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
+import { STATUS_LABEL } from '@/lib/serviceStatus';
 import {
   actions,
   control,
@@ -205,6 +208,16 @@ export const DebugSection = ({
             label: STATE_LABEL[v],
           }))}
           onChange={(v) => onChangeDebug({ sectionState: v })}
+        />
+        <SelectRow<DebugServiceStatus>
+          label="サービスの障害"
+          hint="見ているコンポーネントをすべてこの状態にする"
+          value={debug.serviceStatus}
+          options={DEBUG_SERVICE_STATUSES.map((v) => ({
+            value: v,
+            label: v ? STATUS_LABEL[v] : '実データどおり',
+          }))}
+          onChange={(v) => onChangeDebug({ serviceStatus: v })}
         />
       </fieldset>
 
