@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import { useState } from 'react';
-import { codespacesQuota } from '@/lib/codespacesQuota';
+import { codespacesFreeHours, codespacesQuota } from '@/lib/codespacesQuota';
 import { GITHUB_PLANS, type GithubPlan } from '@/lib/plans';
 import { statusText } from '@/lib/sectionStatus';
 import type { BillingUsageSummary, Codespace, SectionState } from '@/lib/types';
@@ -150,7 +150,7 @@ const Quota = ({
       <div className={quotaBox}>
         <QuotaBar
           label={hours}
-          free={GITHUB_PLANS[plan].codespacesCoreHours}
+          free={codespacesFreeHours(plan)}
           unit="時間"
           unavailable={why}
         />
