@@ -176,6 +176,63 @@ describe('getWorkersBuilds', () => {
     expect(init.headers).toMatchObject({ Authorization: 'Bearer cf_token' });
   });
 
+  it('Preview（本番以外のブランチ）のビルドも Preview ごとの一覧から取る', async () => {
+    const previewCalls: string[] = [];
+    routes({
+      ...basic(),
+      '/builds/workers/tag-site/previews': (url) => {
+        previewCalls.push(url.pathname + url.search);
+        return ok([
+          { preview_id: 'pv-dev', branch: 'develop' },
+          // branch がなければ preview_id を名前に使う
+          { preview_id: 'pv-x', branch: null },
+          { preview_id: 'pv-broken', branch: 'broken' },
+        ]);
+      },
+      '/builds/workers/tag-site/previews/pv-dev/builds': () =>
+        ok([
+          rawBuild('d1', '2026-11-27T01:00:00Z', {
+            build_trigger_metadata: { branch: 'develop' },
+          }),
+          // 本番の一覧にもあるビルドは1回だけ数える
+          rawBuild('s1', '2026-11-26T00:00:00Z'),
+        ]),
+      '/builds/workers/tag-site/previews/pv-x/builds': () =>
+        ok([rawBuild('x1', '2026-11-24T00:00:00Z')]),
+      // 1つの Preview が取れなくても、ほかの Preview と本番は出す
+      '/builds/workers/tag-site/previews/pv-broken/builds': () => json({}, 500),
+      // Preview がない Worker は result が null でも落ちない
+      '/builds/workers/tag-api/previews': () => ok(null),
+    });
+    const { getWorkersBuilds } = await load();
+    const s = await getWorkersBuilds(env);
+
+    expect(previewCalls[0]).toContain('per_page=10');
+    expect(s.builds.map((b) => b.id)).toEqual(['d1', 'a1', 's1', 'a2', 'x1']);
+    expect(s.builds[0]).toMatchObject({
+      branch: 'develop',
+      dashboardUrl:
+        'https://dash.cloudflare.com/acc 1/workers/services/view/site/production/previews/develop/builds/d1',
+    });
+    expect(s.builds[4].dashboardUrl).toBe(
+      'https://dash.cloudflare.com/acc 1/workers/services/view/site/production/previews/pv-x/builds/x1',
+    );
+    // s1 は本番のリンクのまま
+    expect(s.builds[2].dashboardUrl).toContain('/production/builds/s1');
+    // Preview のビルド時間も今期の合計に入る（d1・x1 の 2分ずつ）
+    expect(s.usedMinutes).toBe(2 + 299 + 2 + 2 + 2);
+  });
+
+  it('Preview の一覧が取れない Worker は本番のビルドだけ出す', async () => {
+    routes({
+      ...basic(),
+      '/builds/workers/tag-site/previews': () => json({}, 404),
+    });
+    const { getWorkersBuilds } = await load();
+    const s = await getWorkersBuilds(env);
+    expect(s.builds.map((b) => b.id)).toEqual(['a1', 's1', 'a2']);
+  });
+
   it('latest が配列で返っても trigger から tag を読む', async () => {
     routes({
       ...basic(),
