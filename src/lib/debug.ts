@@ -252,6 +252,8 @@ const mockUsage = (): CloudflareUsage => {
   };
 };
 
+const DAY_MS = 24 * 60 * 60_000;
+
 const mockBase = (): DashboardResponse => ({
   user: {
     login: 'preview-user',
@@ -269,6 +271,10 @@ const mockBase = (): DashboardResponse => ({
   cloudflare: {
     builds: ok(mockWorkers(0)),
     usage: ok(mockUsage()),
+  },
+  tokens: {
+    github: ok({ expiresAt: new Date(Date.now() + 40 * DAY_MS).toISOString() }),
+    cloudflare: ok({ expiresAt: null }),
   },
   notifyAfterMin: 60,
   fetchedAt: new Date().toISOString(),
@@ -310,6 +316,7 @@ export const applyDebug = (
     ...base,
     github: { ...base.github },
     cloudflare: { ...base.cloudflare },
+    tokens: { ...base.tokens },
   };
 
   const csHours = num(d.codespacesHours);
@@ -409,6 +416,13 @@ export const applyDebug = (
     out.github.copilot = ok(p);
   }
 
+  const tokenDays = num(d.githubTokenDays);
+  if (tokenDays !== null) {
+    out.tokens.github = ok({
+      expiresAt: new Date(Date.now() + tokenDays * DAY_MS).toISOString(),
+    });
+  }
+
   const state = d.sectionState;
   if (state) {
     const fake = (setting: string, permission: string) =>
@@ -423,6 +437,10 @@ export const applyDebug = (
     out.cloudflare = {
       builds: fake(cf, 'Workers Builds Configuration: Read'),
       usage: fake(cf, 'Account Analytics: Read'),
+    };
+    out.tokens = {
+      github: fake('GITHUB_TOKEN', 'トークンの再発行'),
+      cloudflare: fake(cf, 'トークンの再発行'),
     };
   }
 

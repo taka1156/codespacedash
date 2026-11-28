@@ -118,6 +118,53 @@ describe('getUser', () => {
   });
 });
 
+describe('トークンの期限', () => {
+  const withExpiration = (value: string | null) =>
+    routes({
+      '/user': () => {
+        const res = json({ login: 'me' });
+        if (value !== null) {
+          res.headers.set('GitHub-Authentication-Token-Expiration', value);
+        }
+        return res;
+      },
+    });
+
+  it('/user の応答ヘッダーから読み、追加のリクエストはしない', async () => {
+    withExpiration('2026-12-03 00:00:00 UTC');
+    const { getUser, getGithubToken } = await load();
+    await getUser(env);
+    expect(await getGithubToken(env)).toEqual({
+      expiresAt: '2026-12-03T00:00:00.000Z',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('ヘッダーがなければ無期限（null）', async () => {
+    withExpiration(null);
+    const { getGithubToken } = await load();
+    expect(await getGithubToken(env)).toEqual({ expiresAt: null });
+  });
+
+  it.each([
+    ['2026-12-03 09:00:00 +0900', '2026-12-03T00:00:00.000Z'],
+    ['2026-12-03 09:00:00 +09:00', '2026-12-03T00:00:00.000Z'],
+    [' 2026-12-03 00:00:00 UTC ', '2026-12-03T00:00:00.000Z'],
+  ])('時差付きの %s も読める', async (raw, iso) => {
+    const { parseTokenExpiration } = await load();
+    expect(parseTokenExpiration(raw)).toBe(iso);
+  });
+
+  it.each(['tomorrow', '2026-13-45 00:00:00 UTC'])(
+    '読めない値（%s）はエラーにする（無期限と取り違えない）',
+    async (raw) => {
+      const { parseTokenExpiration, GithubError } = await load();
+      expect(() => parseTokenExpiration(raw)).toThrow(GithubError);
+      expect(() => parseTokenExpiration(raw)).toThrow(raw);
+    },
+  );
+});
+
 describe('listCodespaces', () => {
   const raw = (id: number, p: Record<string, unknown> = {}) => ({
     id,

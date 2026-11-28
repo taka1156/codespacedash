@@ -5,6 +5,7 @@ import type {
   GithubUser,
   PremiumRequestItem,
   PremiumRequestUsage,
+  TokenInfo,
   WorkflowRun,
 } from '../../shared/types';
 import type { Env } from '../env';
@@ -18,11 +19,12 @@ export class GithubError extends Error {
   }
 }
 
-export const gh = async <T>(
+/** 応答の本文を読む前の Response を返す（ヘッダーを読みたいとき用） */
+const ghResponse = async (
   env: Env,
   path: string,
   init: RequestInit = {},
-): Promise<T> => {
+): Promise<Response> => {
   if (!env.GITHUB_TOKEN) {
     throw new GithubError(500, 'GITHUB_TOKEN が設定されていません');
   }
@@ -46,32 +48,79 @@ export const gh = async <T>(
     } catch {}
     throw new GithubError(res.status, message);
   }
+  return res;
+};
+
+export const gh = async <T>(
+  env: Env,
+  path: string,
+  init: RequestInit = {},
+): Promise<T> => {
+  const res = await ghResponse(env, path, init);
   return (res.status === 204 ? null : await res.json()) as T;
 };
 
 // ── ここから下はレスポンスを必要なフィールドだけに絞って返す ──
 
-// login はトークンで固定なので isolate 内でキャッシュ
-let cachedUser: { user: GithubUser; at: number } | null = null;
+// login はトークンで固定なので isolate 内でキャッシュ。
+// トークンの期限も同じ応答のヘッダーに入っているので一緒に持つ
+let cachedUser: {
+  user: GithubUser;
+  tokenExpiration: string | null;
+  at: number;
+} | null = null;
 
-export const getUser = async (env: Env): Promise<GithubUser> => {
+const loadUser = async (env: Env) => {
   if (cachedUser && Date.now() - cachedUser.at < 10 * 60_000) {
-    return cachedUser.user;
+    return cachedUser;
   }
-  const u = await gh<Omit<GithubUser, 'plan'> & { plan?: { name?: string } }>(
-    env,
-    '/user',
-  );
-  const user: GithubUser = {
-    login: u.login,
-    name: u.name,
-    avatar_url: u.avatar_url,
-    html_url: u.html_url,
-    plan: u.plan?.name ?? null,
+  const res = await ghResponse(env, '/user');
+  const u = (await res.json()) as Omit<GithubUser, 'plan'> & {
+    plan?: { name?: string };
   };
-  cachedUser = { user, at: Date.now() };
-  return user;
+  cachedUser = {
+    user: {
+      login: u.login,
+      name: u.name,
+      avatar_url: u.avatar_url,
+      html_url: u.html_url,
+      plan: u.plan?.name ?? null,
+    },
+    // Fine-grained PAT・期限つきの classic PAT のときだけ付く（無期限なら付かない）
+    tokenExpiration: res.headers.get('github-authentication-token-expiration'),
+    at: Date.now(),
+  };
+  return cachedUser;
 };
+
+export const getUser = async (env: Env): Promise<GithubUser> =>
+  (await loadUser(env)).user;
+
+const EXPIRATION =
+  /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (UTC|[+-]\d{2}:?\d{2})$/;
+
+/**
+ * GitHub-Authentication-Token-Expiration（例: "2026-12-03 00:00:00 UTC"）を ISO 8601 にする。
+ * ヘッダーがなければ無期限として null
+ */
+export const parseTokenExpiration = (raw: string | null): string | null => {
+  if (raw === null) {
+    return null;
+  }
+  const m = EXPIRATION.exec(raw.trim());
+  const time = m
+    ? Date.parse(`${m[1]}T${m[2]}${m[3] === 'UTC' ? 'Z' : m[3]}`)
+    : Number.NaN;
+  if (Number.isNaN(time)) {
+    throw new GithubError(502, `トークンの期限を読み取れません: ${raw}`);
+  }
+  return new Date(time).toISOString();
+};
+
+/** GITHUB_TOKEN の期限。getUser と同じ応答を使うので、追加のリクエストはしない */
+export const getGithubToken = async (env: Env): Promise<TokenInfo> => ({
+  expiresAt: parseTokenExpiration((await loadUser(env)).tokenExpiration),
+});
 
 interface RawCodespace extends Omit<Codespace, 'has_unpushed_changes'> {
   git_status?: {

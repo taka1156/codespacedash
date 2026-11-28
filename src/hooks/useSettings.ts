@@ -43,6 +43,8 @@ export interface DebugSettings {
   actionsMinutes: string;
   workersMinutes: string;
   copilotUsd: string;
+  /** GitHub トークンの期限までの日数（期限の警告を確かめる） */
+  githubTokenDays: string;
 }
 
 export interface Settings {
@@ -66,6 +68,7 @@ export const EMPTY_DEBUG: DebugSettings = {
   actionsMinutes: '',
   workersMinutes: '',
   copilotUsd: '',
+  githubTokenDays: '',
 };
 
 export const SAMPLE_DEBUG: Partial<DebugSettings> = {
@@ -153,6 +156,7 @@ const load = (): Settings => {
         actionsMinutes: str(d.actionsMinutes),
         workersMinutes: str(d.workersMinutes),
         copilotUsd: str(d.copilotUsd),
+        githubTokenDays: str(d.githubTokenDays),
       },
     };
   } catch {

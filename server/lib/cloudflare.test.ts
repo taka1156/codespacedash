@@ -457,3 +457,55 @@ describe('getWorkersBuilds', () => {
     });
   });
 });
+
+describe('getCloudflareToken', () => {
+  const VERIFY = '/client/v4/user/tokens/verify';
+
+  it('ユーザー単位のトークンを /user/tokens/verify で確かめ、期限を返す', async () => {
+    routes({
+      [VERIFY]: () =>
+        ok({ id: 't1', status: 'active', expires_on: '2027-05-01T00:00:00Z' }),
+    });
+    const { getCloudflareToken } = await load();
+    expect(await getCloudflareToken(env)).toEqual({
+      expiresAt: '2027-05-01T00:00:00Z',
+    });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`https://api.cloudflare.com${VERIFY}`);
+    expect(init?.headers).toMatchObject({ Authorization: 'Bearer cf_token' });
+  });
+
+  it('期限がなければ無期限（null）', async () => {
+    routes({ [VERIFY]: () => ok({ id: 't1', status: 'active' }) });
+    const { getCloudflareToken } = await load();
+    expect(await getCloudflareToken(env)).toEqual({ expiresAt: null });
+  });
+
+  it('期限切れは期限の日時をそのまま返す', async () => {
+    routes({
+      [VERIFY]: () =>
+        ok({ status: 'expired', expires_on: '2026-11-01T00:00:00Z' }),
+    });
+    const { getCloudflareToken } = await load();
+    expect(await getCloudflareToken(env)).toEqual({
+      expiresAt: '2026-11-01T00:00:00Z',
+    });
+  });
+
+  it('無効化されたトークンは権限不足（403）', async () => {
+    routes({ [VERIFY]: () => ok({ status: 'disabled' }) });
+    const { getCloudflareToken } = await load();
+    await expect(getCloudflareToken(env)).rejects.toMatchObject({
+      status: 403,
+      message: 'CLOUDFLARE_API_TOKEN が無効です（disabled）',
+    });
+  });
+
+  it('トークンがなければ呼ばずにエラー', async () => {
+    const { getCloudflareToken } = await load();
+    await expect(
+      getCloudflareToken(fakeEnv({ CLOUDFLARE_API_TOKEN: '' })),
+    ).rejects.toMatchObject({ status: 500 });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
