@@ -242,6 +242,34 @@ export interface TokenInfo {
   expiresAt: string | null;
 }
 
+// GitHub・Cloudflare の公式ステータスページ（Atlassian Statuspage）の状態
+export type StatusService = 'github' | 'cloudflare';
+
+/** operational 以外の状態 */
+export type ComponentStatus =
+  | 'degraded_performance'
+  | 'partial_outage'
+  | 'major_outage'
+  | 'under_maintenance';
+
+export interface ServiceIncident {
+  id: string;
+  /** ステータスページのタイトル（英語のまま） */
+  name: string;
+  url: string;
+}
+
+/** 見ているコンポーネントのうち、正常でないもの */
+export interface ServiceIssue {
+  component: string;
+  status: ComponentStatus;
+  /** このコンポーネントに関係する未解決の障害・進行中のメンテナンス */
+  incidents: ServiceIncident[];
+}
+
+/** 取れなかったときは空（ダッシュボード自体は止めない） */
+export type ServiceStatus = Record<StatusService, ServiceIssue[]>;
+
 // GET /api/dashboard
 export interface DashboardResponse {
   user: GithubUser;
@@ -260,6 +288,7 @@ export interface DashboardResponse {
     github: SectionState<TokenInfo>;
     cloudflare: SectionState<TokenInfo>;
   };
+  serviceStatus: ServiceStatus;
   notifyAfterMin: number;
   fetchedAt: string;
 }

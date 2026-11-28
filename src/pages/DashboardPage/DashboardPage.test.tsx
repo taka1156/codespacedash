@@ -9,7 +9,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useDashboard } from '@/hooks/useDashboard';
 import { usePulls } from '@/hooks/usePulls';
 import { usePush } from '@/hooks/usePush';
-import type { DashboardResponse } from '@/lib/types';
+import type {
+  ComponentStatus,
+  DashboardResponse,
+  ServiceStatus,
+} from '@/lib/types';
 import {
   ago,
   build,
@@ -203,17 +207,17 @@ describe('DashboardPage', () => {
     const { container } = render(<DashboardPage />);
     expect(screen.queryAllByRole('heading', { level: 2 })).toHaveLength(0);
     expect(
-      container.querySelector('main > div:last-child')?.children,
+      container.querySelector('main > div:last-of-type')?.children,
     ).toHaveLength(3);
   });
 
   it('データがなく取得中でもなければ何も出さない', () => {
     mockDashboard({ data: null, loading: false });
     const { container } = render(<DashboardPage />);
-    expect(container.querySelector('main')?.lastElementChild).toHaveAttribute(
-      'role',
-      'tablist',
-    );
+    // タブの次はフッター（ステータスページへのリンク）だけ
+    expect(
+      container.querySelector('main > footer')?.previousElementSibling,
+    ).toHaveAttribute('role', 'tablist');
   });
 
   it('エラーを出す', () => {
@@ -290,6 +294,104 @@ describe('DashboardPage', () => {
         '要確認',
       ),
     ).toBeNull();
+  });
+
+  describe('公式ステータスページの障害', () => {
+    const issue = (
+      component: string,
+      status: ComponentStatus = 'major_outage',
+    ) => ({
+      component,
+      status,
+      incidents: [],
+    });
+    const withStatus = (serviceStatus: Partial<ServiceStatus>) =>
+      mockDashboard({
+        data: dashboard({
+          serviceStatus: { github: [], cloudflare: [], ...serviceStatus },
+          cloudflare: {
+            builds: { status: 'error', message: 'Cloudflare API 503' },
+          },
+        }),
+      });
+    const strips = () =>
+      screen.queryAllByRole('status').map((s) => s.textContent);
+    const tab = (name: RegExp) => screen.getByRole('tab', { name });
+
+    it('障害がなければ帯も印も出さず、フッターのリンクだけ', () => {
+      render(<DashboardPage />);
+      expect(strips()).toEqual([]);
+      expect(screen.queryByTitle('サービスで障害が発生中')).toBeNull();
+      expect(
+        screen.getByRole('link', { name: 'GitHub Status ↗' }),
+      ).toBeInTheDocument();
+    });
+
+    it('GitHub のパネルに自分のコンポーネントの帯を出し、API の障害はタブの上に1回だけ出す', () => {
+      withStatus({
+        github: [
+          issue('API Requests'),
+          issue('Actions', 'degraded_performance'),
+        ],
+      });
+      render(<DashboardPage />);
+      expect(strips()).toEqual([
+        expect.stringMatching(/^全面障害：API Requests/),
+        expect.stringMatching(/^性能低下：Actions/),
+      ]);
+      expect(
+        within(tab(/GitHub/)).getByTitle('サービスで障害が発生中'),
+      ).toBeInTheDocument();
+      expect(
+        within(tab(/PR/)).getByTitle('サービスで障害が発生中'),
+      ).toBeInTheDocument();
+      expect(
+        within(tab(/Cloudflare/)).queryByTitle('サービスで障害が発生中'),
+      ).toBeNull();
+    });
+
+    it('PR だけの障害は PR タブにだけ印を付け、PR タブで帯を出す', () => {
+      withStatus({ github: [issue('Pull Requests')] });
+      render(<DashboardPage />);
+      expect(
+        within(tab(/GitHub/)).queryByTitle('サービスで障害が発生中'),
+      ).toBeNull();
+      expect(
+        within(tab(/PR/)).getByTitle('サービスで障害が発生中'),
+      ).toBeInTheDocument();
+      expect(strips()).toEqual([]);
+      fireEvent.click(tab(/PR/));
+      expect(strips()).toEqual([
+        expect.stringMatching(/^全面障害：Pull Requests/),
+      ]);
+    });
+
+    it('Cloudflare のパネルにも帯を出し、取得エラーには障害の一言を添える', () => {
+      withStatus({
+        cloudflare: [
+          issue('API'),
+          issue('Workers Builds'),
+          issue('Workers KV', 'under_maintenance'),
+        ],
+      });
+      render(<DashboardPage />);
+      expect(
+        within(tab(/Cloudflare/)).getByTitle('サービスで障害が発生中'),
+      ).toBeInTheDocument();
+      fireEvent.click(tab(/Cloudflare/));
+      expect(strips()).toEqual([
+        expect.stringMatching(/^全面障害：API/),
+        expect.stringMatching(/^全面障害：Workers Builds/),
+        // KV は日次とストレージの2つのパネルに関係する
+        expect.stringMatching(/^メンテナンス中：Workers KV/),
+        expect.stringMatching(/^メンテナンス中：Workers KV/),
+      ]);
+      expect(
+        screen.getByText(
+          /Cloudflare 側で障害が発生中です（API・Workers Builds）/,
+        ),
+      ).toBeInTheDocument();
+    });
   });
 
   describe('トークンの期限の警告', () => {

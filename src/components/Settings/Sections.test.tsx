@@ -124,6 +124,7 @@ describe('DebugSection', () => {
         target: { value },
       });
     select(/^全項目/, 'forbidden');
+    select(/^サービスの障害/, 'major_outage');
     select(/^GitHub/, 'pro');
     select(/^Cloudflare Workers/, 'paid');
     select(/^Copilot/, 'free');
@@ -139,6 +140,7 @@ describe('DebugSection', () => {
 
     expect(onChangeDebug.mock.calls).toEqual([
       [{ sectionState: 'forbidden' }],
+      [{ serviceStatus: 'major_outage' }],
       [{ githubPlan: 'pro' }],
       [{ workersPlan: 'paid' }],
       [{ copilotPlan: 'free' }],
@@ -154,6 +156,17 @@ describe('DebugSection', () => {
         .getAllByRole('option')
         .map((o) => o.textContent),
     ).toEqual(['実データどおり', '未設定', '権限不足', '取得エラー']);
+    expect(
+      within(screen.getByRole('combobox', { name: /^サービスの障害/ }))
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual([
+      '実データどおり',
+      '性能低下',
+      '一部障害',
+      '全面障害',
+      'メンテナンス中',
+    ]);
     expect(
       within(screen.getByRole('combobox', { name: /^GitHub/ }))
         .getAllByRole('option')

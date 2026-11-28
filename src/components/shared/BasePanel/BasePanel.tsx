@@ -1,3 +1,4 @@
+import { ScopedIssueStrips } from '../ServiceStatus/ServiceStatus';
 import {
   panel,
   panelBody,
@@ -32,7 +33,10 @@ export const BasePanel = ({
         </div>
         {badgeText && <div className={statBadge}>{badgeText}</div>}
       </div>
-      <div className={panelBody}>{children}</div>
+      <div className={panelBody}>
+        <ScopedIssueStrips />
+        {children}
+      </div>
     </section>
   );
 };

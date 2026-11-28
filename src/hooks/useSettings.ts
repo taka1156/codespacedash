@@ -8,6 +8,7 @@ import {
   type WorkersPlan,
 } from '@/lib/plans';
 import { IS_STATIC_PREVIEW } from '@/lib/preview';
+import type { ComponentStatus } from '@/lib/types';
 import { isRepoName, MAX_FAVORITES, uniqueRepos } from '../../shared/repos';
 
 const KEY = 'codespacedash:settings';
@@ -32,9 +33,20 @@ export const DEBUG_SECTION_STATES: readonly DebugSectionState[] = [
   'error',
 ];
 
+/** デバッグ：見ているコンポーネントをすべてこの状態にする（障害の表示を確かめる） */
+export type DebugServiceStatus = '' | ComponentStatus;
+export const DEBUG_SERVICE_STATUSES: readonly DebugServiceStatus[] = [
+  '',
+  'degraded_performance',
+  'partial_outage',
+  'major_outage',
+  'under_maintenance',
+];
+
 export interface DebugSettings {
   enabled: boolean;
   sectionState: DebugSectionState;
+  serviceStatus: DebugServiceStatus;
   githubPlan: GithubPlan | '';
   copilotPlan: CopilotPlan | '';
   workersPlan: WorkersPlan | '';
@@ -60,6 +72,7 @@ export interface Settings {
 export const EMPTY_DEBUG: DebugSettings = {
   enabled: false,
   sectionState: '',
+  serviceStatus: '',
   githubPlan: '',
   copilotPlan: '',
   workersPlan: '',
@@ -136,6 +149,7 @@ const load = (): Settings => {
       debug: {
         enabled: IS_STATIC_PREVIEW || d.enabled === true,
         sectionState: pick(d.sectionState, DEBUG_SECTION_STATES, ''),
+        serviceStatus: pick(d.serviceStatus, DEBUG_SERVICE_STATUSES, ''),
         githubPlan: pick<GithubPlan | ''>(
           d.githubPlan,
           ['', ...GITHUB_PLAN_KEYS],

@@ -51,3 +51,9 @@ export const dot = style({
   borderRadius: '50%',
   background: 'var(--red)',
 });
+
+export const outageMark = style({
+  marginLeft: 4,
+  color: 'var(--yellow)',
+  fontSize: '0.8em',
+});
