@@ -261,6 +261,30 @@ describe('GET /api/dashboard', () => {
     expect(body.notifyAfterMin).toBe(60);
   });
 
+  it.each(['Asia/Tokio', ''])(
+    'TIMEZONE が不正（%s）でも、課金と Copilot だけをエラーにして他は返す',
+    async (tz) => {
+      mockAll();
+      vi.mocked(getPremiumRequests).mockResolvedValue({
+        timePeriod: { year: 2026, month: 11 },
+        usageItems: [],
+      });
+      const res = await call('/api/dashboard', {}, fakeEnv({ TIMEZONE: tz }));
+      expect(res.status).toBe(200);
+      const body = await res.json<{
+        github: Record<string, { status: string; message?: string }>;
+      }>();
+      expect(body.github.billing).toEqual({
+        status: 'error',
+        message: expect.stringContaining('time zone'),
+      });
+      expect(body.github.copilot.status).toBe('error');
+      expect(body.github.codespaces.status).toBe('ok');
+      expect(getBillingSummary).not.toHaveBeenCalled();
+      expect(getPremiumRequests).not.toHaveBeenCalled();
+    },
+  );
+
   it('ユーザーが取れなければ 502', async () => {
     vi.mocked(getUser).mockRejectedValue(new GithubError(401, 'Bad creds'));
     const res = await call('/api/dashboard');
