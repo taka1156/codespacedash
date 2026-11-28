@@ -43,6 +43,7 @@ import {
   sendToAll,
 } from './lib/push';
 import { settle, unconfigured } from './lib/section';
+import { checkTokenExpiry } from './lib/tokenNotify';
 
 const api = new Hono<AppEnv>().basePath('/api');
 
@@ -194,6 +195,18 @@ api.onError((err, c) => {
 export default {
   fetch: api.fetch,
   async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(checkForgottenCodespaces(env));
+    // 片方が失敗しても、もう片方は最後まで動かす
+    ctx.waitUntil(
+      Promise.allSettled([
+        checkForgottenCodespaces(env),
+        checkTokenExpiry(env),
+      ]).then((results) => {
+        for (const r of results) {
+          if (r.status === 'rejected') {
+            console.error('scheduled task failed', r.reason);
+          }
+        }
+      }),
+    );
   },
 } satisfies ExportedHandler<Env>;

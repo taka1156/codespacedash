@@ -77,7 +77,6 @@ export const SAMPLE_DEBUG: Partial<DebugSettings> = {
   actionsMinutes: '1650',
   workersMinutes: '1280',
   copilotUsd: '7.4',
-  githubTokenDays: '5',
 };
 
 const DEFAULTS: Settings = {

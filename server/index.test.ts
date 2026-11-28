@@ -21,6 +21,7 @@ import {
 import { checkForgottenCodespaces } from './lib/notify';
 import { listPullRequests, listRepoCandidates } from './lib/pulls';
 import { sendToAll } from './lib/push';
+import { checkTokenExpiry } from './lib/tokenNotify';
 import { fakeEnv, PUSH_VARS } from './testing/fakeEnv';
 
 // API を呼ぶ関数だけ差し替える（判定・検証の関数は本物を使う）
@@ -46,6 +47,7 @@ vi.mock('./lib/pulls', async (importOriginal) => ({
   listRepoCandidates: vi.fn(),
 }));
 vi.mock('./lib/notify', () => ({ checkForgottenCodespaces: vi.fn() }));
+vi.mock('./lib/tokenNotify', () => ({ checkTokenExpiry: vi.fn() }));
 vi.mock('./lib/push', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./lib/push')>()),
   sendToAll: vi.fn(),
@@ -417,15 +419,33 @@ describe('Web Push', () => {
 });
 
 describe('scheduled', () => {
-  it('消し忘れの確認を waitUntil で走らせる', async () => {
-    const p = Promise.resolve();
-    vi.mocked(checkForgottenCodespaces).mockReturnValue(p);
+  const run = async () => {
     const waitUntil = vi.fn();
     const env = fakeEnv();
     await worker.scheduled({} as ScheduledController, env, {
       waitUntil,
     } as unknown as ExecutionContext);
+    await waitUntil.mock.calls[0][0];
+    return env;
+  };
+
+  it('消し忘れとトークンの期限の確認を waitUntil で走らせる', async () => {
+    vi.mocked(checkForgottenCodespaces).mockResolvedValue();
+    vi.mocked(checkTokenExpiry).mockResolvedValue();
+    const env = await run();
     expect(checkForgottenCodespaces).toHaveBeenCalledWith(env);
-    expect(waitUntil).toHaveBeenCalledWith(p);
+    expect(checkTokenExpiry).toHaveBeenCalledWith(env);
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
+  it('片方が失敗しても、もう片方は動かしてエラーを記録する', async () => {
+    vi.mocked(checkForgottenCodespaces).mockRejectedValue(new Error('boom'));
+    vi.mocked(checkTokenExpiry).mockResolvedValue();
+    await run();
+    expect(checkTokenExpiry).toHaveBeenCalled();
+    expect(console.error).toHaveBeenCalledWith(
+      'scheduled task failed',
+      new Error('boom'),
+    );
   });
 });

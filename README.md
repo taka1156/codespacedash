@@ -180,6 +180,7 @@ Worker に置いた `GITHUB_TOKEN` と `CLOUDFLARE_API_TOKEN` の期限を出し
 
 - GitHub は `GET /user` の応答ヘッダー `GitHub-Authentication-Token-Expiration` から読みます（プラン判定と同じリクエストなので、追加の呼び出しはありません）。ヘッダーがなければ無期限です
 - Cloudflare は `GET /user/tokens/verify` の `expires_on` から読みます（追加の権限は不要）
+- プッシュ通知を有効にしていれば、Cron（15分ごと）でも確かめ、期限が近い・切れた・無効のときに通知します（同じトークン・同じ状態の通知は1日1回。通知を押すと設定ページのトークンを開きます）
 
 **通知**
 
